@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readFile, writeFile, readdir } from 'fs/promises'
-import { join } from 'path'
+import { readFile, writeFile, readdir, mkdir } from 'fs/promises'
+import { join, dirname } from 'path'
+import { existsSync } from 'fs'
 
 // List files in the docs directory
 export async function GET(request: NextRequest) {
@@ -32,15 +33,47 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Handle both POST and PUT methods for saving files
+export async function POST(request: NextRequest) {
+  return handleSave(request)
+}
+
 export async function PUT(request: NextRequest) {
-  const { path, content } = await request.json()
-  
+  return handleSave(request)
+}
+
+async function handleSave(request: NextRequest) {
   try {
+    const body = await request.json()
+    const { path, content } = body
+    
+    console.log('Saving file:', { path, contentLength: content?.length })
+    
+    if (!path || content === undefined) {
+      console.error('Missing path or content:', { path, hasContent: content !== undefined })
+      return NextResponse.json({ error: 'Missing path or content' }, { status: 400 })
+    }
+
     const fullPath = join(process.cwd(), 'docs', path)
+    const dir = dirname(fullPath)
+
+    console.log('Full path:', fullPath)
+    console.log('Directory:', dir)
+
+    // Ensure the directory exists
+    if (!existsSync(dir)) {
+      console.log('Creating directory:', dir)
+      await mkdir(dir, { recursive: true })
+    }
+
+    // Write the file
+    console.log('Writing file...')
     await writeFile(fullPath, content, 'utf-8')
+    console.log('File written successfully')
     
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error('Error saving file:', error)
     return NextResponse.json({ error: 'Failed to save file' }, { status: 500 })
   }
 } 

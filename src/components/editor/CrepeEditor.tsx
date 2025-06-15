@@ -34,7 +34,22 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
     crepeInstance.current = crepe;
     isInitialized.current = true;
 
+    // Set up change listener using MutationObserver
+    const observer = new MutationObserver(() => {
+      if (onChange && crepeInstance.current) {
+        const markdown = crepeInstance.current.getMarkdown();
+        onChange(markdown);
+      }
+    });
+
+    observer.observe(editorRef.current, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
     return () => {
+      observer.disconnect();
       if (crepeInstance.current) {
         crepeInstance.current.destroy();
         crepeInstance.current = null;
@@ -43,17 +58,20 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
     };
   }, []); // Only run on mount/unmount
 
-  // Handle content updates
+  // Handle content updates from props
   useEffect(() => {
     if (crepeInstance.current && value !== undefined) {
-      // Destroy and recreate the editor with new content
-      crepeInstance.current.destroy();
-      const crepe = new Crepe({
-        root: editorRef.current!,
-        defaultValue: value,
-      });
-      crepe.create();
-      crepeInstance.current = crepe;
+      const currentContent = crepeInstance.current.getMarkdown();
+      if (currentContent !== value) {
+        // Destroy and recreate the editor with new content
+        crepeInstance.current.destroy();
+        const crepe = new Crepe({
+          root: editorRef.current!,
+          defaultValue: value,
+        });
+        crepe.create();
+        crepeInstance.current = crepe;
+      }
     }
   }, [value]);
 

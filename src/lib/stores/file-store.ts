@@ -17,6 +17,8 @@ interface FileStore {
   setFiles: (files: FileNode[]) => void
   selectFile: (path: string) => void
   setSearchTerm: (term: string) => void
+  setSelectedFile: (file: string | null) => void
+  closeFile: () => void
 }
 
 export const useFileStore = create<FileStore>((set) => ({
@@ -26,4 +28,6 @@ export const useFileStore = create<FileStore>((set) => ({
   setFiles: (files) => set({ files }),
   selectFile: (path) => set({ selectedFile: path }),
   setSearchTerm: (term) => set({ searchTerm: term }),
+  setSelectedFile: (file) => set({ selectedFile: file }),
+  closeFile: () => set({ selectedFile: null })
 })) 
