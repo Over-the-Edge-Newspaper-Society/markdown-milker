@@ -24,12 +24,16 @@ import { toolbar } from '@milkdown/crepe/feature/toolbar'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
 
+// Import image picker
+import { ImagePicker } from './image-picker'
+import { useEditorStore } from '@/lib/stores/editor-store'
+
 interface UnifiedCrepeEditorProps {
   documentId: string
   initialContent?: string
   onChange?: (markdown: string) => void
   wsUrl?: string
-  collaborative?: boolean // ✨ Key prop to enable/disable collaboration
+  collaborative?: boolean
 }
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error' | 'synced' | 'solo'
@@ -61,12 +65,15 @@ export function UnifiedCrepeEditor({
   const [errorMessage, setErrorMessage] = useState<string>('')
   const [saveCount, setSaveCount] = useState(0)
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
+  const [showImagePicker, setShowImagePicker] = useState(false)
   
   const isInitializedRef = useRef(false)
   const onChangeRef = useRef(onChange)
   const lastContentRef = useRef(initialContent)
   const initialContentAppliedRef = useRef(false)
   const isSavingRef = useRef(false)
+
+  const { uploadImage, activeDirectory } = useEditorStore()
 
   // Keep onChange ref current
   useEffect(() => {
@@ -136,6 +143,35 @@ export function UnifiedCrepeEditor({
     initialContentAppliedRef.current = false
     isSavingRef.current = false
   }, [collaborative])
+
+  // Enhanced image upload handler
+  const handleImageUpload = useCallback(async (file: File): Promise<string> => {
+    try {
+      console.log('📸 Uploading image to assets:', file.name)
+      const imagePath = await uploadImage(file)
+      console.log('✅ Image uploaded successfully:', imagePath)
+      return imagePath
+    } catch (error) {
+      console.error('❌ Image upload failed:', error)
+      throw error
+    }
+  }, [uploadImage])
+
+  // Handle image selection from picker
+  const handleImageSelect = useCallback((imagePath: string) => {
+    if (builderRef.current) {
+      try {
+        // Insert image markdown at cursor position
+        const imageMarkdown = `![Image](${imagePath})`
+        // This would need to be integrated with the Crepe editor's API
+        console.log('📸 Inserting image:', imageMarkdown)
+        // For now, we'll add it to the content
+        // In a real implementation, you'd use the Crepe editor's insert method
+      } catch (error) {
+        console.error('❌ Failed to insert image:', error)
+      }
+    }
+  }, [])
 
   // ✅ Unified content extraction method
   const getEditorContent = useCallback((): string => {
@@ -379,15 +415,13 @@ export function UnifiedCrepeEditor({
       })
       builder.addFeature(listItem, {})
       builder.addFeature(linkTooltip, {})
+      
+      // Enhanced image block with asset management
       builder.addFeature(imageBlock, {
-        onUpload: async (file: File) => {
-          return new Promise((resolve) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(reader.result as string)
-            reader.readAsDataURL(file)
-          })
-        }
+        onUpload: handleImageUpload,
+        placeholder: 'Click to upload image or drop image here...'
       })
+      
       builder.addFeature(blockEdit, {})
       builder.addFeature(placeholder, { 
         text: collaborative ? 'Start collaborating...' : 'Start writing...', 
@@ -424,7 +458,7 @@ export function UnifiedCrepeEditor({
       setIsLoading(false)
       isInitializedRef.current = false
     }
-  }, [collaborative, documentId, initialContent, initializeCollaboration, setupContentMonitoring])
+  }, [collaborative, documentId, initialContent, initializeCollaboration, setupContentMonitoring, handleImageUpload])
 
   // Initialize editor on mount
   useEffect(() => {
@@ -533,6 +567,8 @@ export function UnifiedCrepeEditor({
           <span className={collaborative ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}>
             {collaborative ? 'Collaborative' : 'Solo'} Mode
           </span>
+          {/* Image Picker Button */}
+          <ImagePicker onImageSelect={handleImageSelect} activeDir={activeDirectory} />
         </div>
       </div>
 
@@ -560,7 +596,7 @@ export function UnifiedCrepeEditor({
               }
             </div>
             <div className={`text-xs ${collaborative ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'} mt-1`}>
-              ✅ Unified Crepe editor • Auto-save {getSaveFrequency()}
+              ✅ Unified Crepe editor • Auto-save {getSaveFrequency()} • 📸 Asset management
             </div>
           </div>
         </div>

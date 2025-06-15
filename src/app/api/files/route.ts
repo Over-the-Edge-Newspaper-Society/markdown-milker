@@ -1,3 +1,4 @@
+// src/app/api/files/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { readFile, writeFile, readdir, mkdir, stat } from 'fs/promises'
 import { join, dirname, extname } from 'path'
@@ -45,11 +46,17 @@ export async function GET(request: NextRequest) {
 
     // List files and directories with full paths (not nested structure)
     // The frontend will handle building the tree
+    // Exclude _assets folder from file tree
     async function getAllFiles(dirPath: string, relativePath: string = ''): Promise<any[]> {
       const files = await readdir(dirPath, { withFileTypes: true })
       const result = []
       
       for (const file of files) {
+        // Skip _assets folder
+        if (file.name === '_assets') {
+          continue
+        }
+        
         const fullPath = join(dirPath, file.name)
         const relativeFilePath = relativePath ? join(relativePath, file.name) : file.name
         const stats = await stat(fullPath)
@@ -74,7 +81,7 @@ export async function GET(request: NextRequest) {
               name: file.name,
               path: relativeFilePath,
               type: 'file',
-              size: stats.size,
+              size: stats.size, // This is the actual file size in bytes from filesystem
               modified: stats.mtime.toISOString()
             })
           }
