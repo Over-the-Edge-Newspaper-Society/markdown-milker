@@ -20,6 +20,10 @@ import { placeholder } from '@milkdown/crepe/feature/placeholder'
 import { table } from '@milkdown/crepe/feature/table'
 import { toolbar } from '@milkdown/crepe/feature/toolbar'
 
+// Import the correct Milkdown contexts
+import { editorViewCtx, commandsCtx } from '@milkdown/kit/core'
+import { imageBlockSchema } from '@milkdown/kit/component/image-block'
+
 // Import Crepe styles with theme support
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
@@ -186,7 +190,22 @@ export function UnifiedCrepeEditor({
     }
   }, [collaborative])
 
-  // Fallback method to insert image as markdown
+  // Custom image upload handler that opens our image picker
+  const handleCustomImageUpload = useCallback(async (file: File): Promise<string> => {
+    // If a file is provided, upload it directly
+    if (file) {
+      return await handleImageUpload(file)
+    }
+    
+    // If no file provided, this means user clicked the upload button
+    // Open our custom image picker instead
+    setShowImagePicker(true)
+    
+    // Return a placeholder - this won't be used since we're opening the picker
+    throw new Error('Opening image picker...')
+  }, [handleImageUpload])
+
+  // Enhanced markdown fallback for image insertion
   const insertMarkdownFallback = useCallback((imagePath: string) => {
     try {
       console.log('📸 Using markdown fallback insertion for:', imagePath)
@@ -212,11 +231,10 @@ export function UnifiedCrepeEditor({
     }
   }, [saveContent])
 
-  // Insert image into editor
+  // Fixed image insertion using proper context objects
   const insertImageIntoEditor = useCallback((imagePath: string) => {
     if (!builderRef.current || !isReady) {
       console.warn('Editor not ready for image insertion')
-      // Use fallback if editor isn't ready
       insertMarkdownFallback(imagePath)
       return
     }
@@ -230,11 +248,12 @@ export function UnifiedCrepeEditor({
         try {
           builderRef.current.editor.action((ctx) => {
             try {
-              // Get the editor view and schema with proper context names
-              const view = ctx.get('editorViewCtx')
-              const schema = ctx.get('schemaCtx')
+              // Get the editor view and schema using proper context objects
+              const view = ctx.get(editorViewCtx)
               
-              if (view && view.state && schema) {
+              if (view && view.state && view.state.schema) {
+                const schema = view.state.schema
+                
                 // Check if image node type exists
                 const imageNodeType = schema.nodes.image || schema.nodes.imageBlock
                 
@@ -329,8 +348,6 @@ export function UnifiedCrepeEditor({
       return ''
     }
   }, [collaborative])
-
-
 
   // ✅ Smart content application (collaborative mode only)
   const applyInitialContentSafely = useCallback(async (collabService: any) => {
@@ -482,12 +499,10 @@ export function UnifiedCrepeEditor({
     // Hook into the editor to intercept slash commands
     builder.editor.action((ctx) => {
       try {
-        const view = ctx.get('editorViewCtx')
+        const view = ctx.get(editorViewCtx)
         
         if (view) {
           // Listen for input events to detect "/image" command
-          const originalHandleKeyDown = view.dom.onkeydown
-          
           view.dom.addEventListener('input', (event) => {
             const target = event.target as HTMLElement
             if (target && target.textContent) {
@@ -545,10 +560,13 @@ export function UnifiedCrepeEditor({
       builder.addFeature(listItem, {})
       builder.addFeature(linkTooltip, {})
       
-      // Enhanced image block with asset management
+      // Enhanced image block with asset management and custom picker
       builder.addFeature(imageBlock, {
-        onUpload: handleImageUploadAndInsert,
-        placeholder: 'Click to upload image or drop image here...'
+        onUpload: handleCustomImageUpload,
+        blockUploadPlaceholderText: 'Choose an image or paste link',
+        blockUploadButton: 'Choose Image',
+        inlineUploadPlaceholderText: 'Choose image or paste link',
+        inlineUploadButton: 'Choose',
       })
       
       builder.addFeature(blockEdit, {})
@@ -590,7 +608,7 @@ export function UnifiedCrepeEditor({
       setIsLoading(false)
       isInitializedRef.current = false
     }
-  }, [collaborative, documentId, initialContent, initializeCollaboration, setupContentMonitoring, handleImageUploadAndInsert, setupImageSlashCommand])
+  }, [collaborative, documentId, initialContent, initializeCollaboration, setupContentMonitoring, handleCustomImageUpload, setupImageSlashCommand])
 
   // Initialize editor on mount
   useEffect(() => {
@@ -732,6 +750,8 @@ export function UnifiedCrepeEditor({
           onImageSelect={handleImageSelect}
           activeDir={activeDirectory}
           trigger={null}
+          open={showImagePicker}
+          onOpenChange={setShowImagePicker}
         />
       )}
       
