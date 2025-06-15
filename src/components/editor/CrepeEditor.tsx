@@ -1,3 +1,4 @@
+// src/components/editor/CrepeEditor.tsx
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
@@ -20,6 +21,12 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const instanceIdRef = useRef<string>('')
   const lastValueRef = useRef<string>(value)
+  const onChangeRef = useRef(onChange)
+
+  // Keep onChange ref current
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
 
   // Generate unique instance ID
   useEffect(() => {
@@ -56,6 +63,7 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
     setIsReady(false)
   }, [])
 
+  // Initialize editor ONLY ONCE - no value dependency!
   const initializeEditor = useCallback(async () => {
     // Prevent multiple instances
     if (!containerRef.current || editorRef.current) {
@@ -83,9 +91,11 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
         return
       }
 
+      console.log('🎯 Creating Milkdown editor (one time only)')
+
       const editor = new Crepe({
         root: containerRef.current,
-        defaultValue: value,
+        defaultValue: value, // Use initial value only
         featureConfigs: {
           toolbar: {
             config: [
@@ -116,52 +126,57 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
       lastValueRef.current = value
       setIsReady(true)
 
+      console.log('✅ Milkdown editor ready')
+
       // Set up change detection
-      if (onChange) {
-        intervalRef.current = setInterval(() => {
-          if (editorRef.current) {
-            try {
-              const content = editorRef.current.getMarkdown()
-              if (content !== lastValueRef.current) {
-                lastValueRef.current = content
-                onChange(content)
+      intervalRef.current = setInterval(() => {
+        if (editorRef.current) {
+          try {
+            const content = editorRef.current.getMarkdown()
+            if (content !== lastValueRef.current) {
+              lastValueRef.current = content
+              if (onChangeRef.current) {
+                onChangeRef.current(content)
               }
-            } catch (error) {
-              console.error('Error reading editor content:', error)
             }
+          } catch (error) {
+            console.error('Error reading editor content:', error)
           }
-        }, 1000)
-      }
+        }
+      }, 1000)
     } catch (error) {
       console.error('Failed to create editor:', error)
       editorRegistry.delete(instanceIdRef.current)
       cleanup()
     }
-  }, [value, onChange, cleanup])
+  }, [cleanup]) // NO value or onChange dependency!
 
-  // Update content when value prop changes
+  // Handle content updates separately (smooth updates, no remount)
   useEffect(() => {
     if (isReady && editorRef.current && value !== lastValueRef.current) {
       try {
+        console.log('📝 Updating content smoothly (no remount)')
         editorRef.current.setMarkdown(value)
         lastValueRef.current = value
       } catch (error) {
         console.error('Error setting editor content:', error)
       }
     }
-  }, [value, isReady])
+  }, [value, isReady]) // This effect only updates content
 
-  // Initialize on mount
+  // Initialize editor ONLY ONCE on mount
   useEffect(() => {
+    console.log('🚀 Initializing editor (mount only)')
     const timer = setTimeout(() => {
       initializeEditor()
     }, 50)
 
     return () => {
+      console.log('🧹 Cleaning up editor (unmount only)')
       clearTimeout(timer)
       cleanup()
     }
-  }, [initializeEditor, cleanup])
+  }, []) // Empty dependency array = run only on mount/unmount
 
   return (
     <div className="h-full w-full relative">
