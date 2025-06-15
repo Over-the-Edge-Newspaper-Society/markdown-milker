@@ -3,10 +3,10 @@
 
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { useFileStore } from '@/lib/stores/file-store'
-import { CrepeEditor } from './CrepeEditor'
+import { CollaborativeEditor } from './CollaborativeEditor'
 import { SaveStatus } from './save-status'
-import { useEffect, useCallback } from 'react'
-import { X, FileText } from 'lucide-react'
+import { useEffect, useCallback, useState } from 'react'
+import { X, FileText, Users } from 'lucide-react'
 import debounce from 'lodash/debounce'
 
 export function EditorArea() {
@@ -19,22 +19,30 @@ export function EditorArea() {
     currentFilePath 
   } = useEditorStore()
   const { selectedFile, closeFile } = useFileStore()
+  const [fileContent, setFileContent] = useState('')
+  const [isCollaborative, setIsCollaborative] = useState(true)
 
   // Debug logging
   console.log('📊 EditorArea render:', {
     selectedFile,
     currentFilePath,
     contentLength: currentContent?.length || 0,
-    hasContent: !!currentContent
+    hasContent: !!currentContent,
+    isCollaborative
   })
 
   // Debounced save function
   const debouncedSave = useCallback(
-    debounce(async () => {
-      if (selectedFile && currentContent !== undefined) {
+    debounce(async (content: string) => {
+      if (selectedFile && content !== undefined) {
         try {
-          console.log('💾 Auto-saving:', selectedFile, `(${currentContent.length} chars)`)
+          console.log('💾 Auto-saving:', selectedFile, `(${content.length} chars)`)
           setSaveStatus('saving')
+          
+          // Update the store content first
+          setContent(content)
+          
+          // Then save to file
           await saveFile()
           setSaveStatus('saved')
           console.log('✅ Auto-save complete')
@@ -44,7 +52,7 @@ export function EditorArea() {
         }
       }
     }, 1500),
-    [selectedFile, currentContent, saveFile, setSaveStatus]
+    [selectedFile, saveFile, setSaveStatus, setContent]
   )
 
   // Load file content when selected
@@ -66,40 +74,44 @@ export function EditorArea() {
           
           if (data.content !== undefined) {
             setContent(data.content)
+            setFileContent(data.content)
             setSaveStatus('saved')
           } else {
             console.warn('⚠️ No content in response')
             setContent('')
+            setFileContent('')
             setSaveStatus('unsaved')
           }
         })
         .catch(error => {
           console.error('❌ Failed to load file:', error)
           setContent('')
+          setFileContent('')
           setSaveStatus('unsaved')
         })
     } else {
       console.log('📁 No file selected, clearing content')
       setCurrentFilePath(null)
       setContent('')
+      setFileContent('')
       setSaveStatus('saved')
     }
   }, [selectedFile, setContent, setCurrentFilePath, setSaveStatus])
 
-  // Auto-save when content changes
-  useEffect(() => {
-    if (currentContent && selectedFile && currentFilePath) {
-      console.log('✏️ Content changed, triggering auto-save:', `${currentContent.length} chars`)
-      setSaveStatus('unsaved')
-      debouncedSave()
-    }
-  }, [currentContent, selectedFile, currentFilePath, debouncedSave, setSaveStatus])
+  // Handle editor content changes
+  const handleEditorChange = useCallback((content: string) => {
+    console.log('✏️ Editor content changed:', `${content.length} chars`)
+    setFileContent(content)
+    setSaveStatus('unsaved')
+    debouncedSave(content)
+  }, [debouncedSave, setSaveStatus])
 
   const handleClose = async () => {
     // Save before closing if there are unsaved changes
-    if (selectedFile && currentContent) {
+    if (selectedFile && fileContent && fileContent !== currentContent) {
       try {
         setSaveStatus('saving')
+        setContent(fileContent)
         await saveFile()
         setSaveStatus('saved')
       } catch (error) {
@@ -109,6 +121,10 @@ export function EditorArea() {
       }
     }
     closeFile()
+  }
+
+  const toggleCollaborative = () => {
+    setIsCollaborative(!isCollaborative)
   }
 
   if (!selectedFile) {
@@ -122,7 +138,7 @@ export function EditorArea() {
               Select a markdown file from the sidebar to start editing
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              ✨ Auto-save enabled • Changes saved automatically
+              ✨ Auto-save enabled • Collaborative editing available
             </p>
           </div>
         </div>
@@ -130,18 +146,38 @@ export function EditorArea() {
     )
   }
 
+  // Generate a document ID for collaboration based on file path
+  const documentId = selectedFile.replace(/[^a-zA-Z0-9]/g, '_')
+
   return (
     <div className="h-full flex flex-col">
-      {/* File header with debug info */}
+      {/* File header with collaboration toggle */}
       <div className="border-b px-4 py-2 flex items-center justify-between bg-muted/30">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
           <span className="text-sm font-medium">{selectedFile}</span>
           <span className="text-xs text-muted-foreground">
-            • {currentContent?.length || 0} chars
+            • {fileContent?.length || 0} chars
           </span>
+          {isCollaborative && (
+            <div className="flex items-center gap-1 text-xs text-blue-600">
+              <Users className="h-3 w-3" />
+              <span>Collaborative</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={toggleCollaborative}
+            className={`px-2 py-1 text-xs rounded transition-colors ${
+              isCollaborative 
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+            title={isCollaborative ? 'Disable collaboration' : 'Enable collaboration'}
+          >
+            {isCollaborative ? 'Collaborative' : 'Solo'}
+          </button>
           <SaveStatus />
           <button
             onClick={handleClose}
@@ -155,14 +191,26 @@ export function EditorArea() {
 
       {/* Editor */}
       <div className="flex-1 overflow-hidden">
-        {selectedFile ? (
+        {selectedFile && (
           <div className="h-full">
-            <CrepeEditor
-              value={currentContent || ''}
-              onChange={setContent}
-            />
+            {isCollaborative ? (
+              <CollaborativeEditor
+                documentId={documentId}
+                initialContent={fileContent}
+                onChange={handleEditorChange}
+                wsUrl={process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'}
+              />
+            ) : (
+              <div className="h-full p-4 flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <FileText className="h-8 w-8 mx-auto mb-2" />
+                  <p>Solo mode - collaboration disabled</p>
+                  <p className="text-xs mt-1">Click "Collaborative" to enable real-time editing</p>
+                </div>
+              </div>
+            )}
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   )
