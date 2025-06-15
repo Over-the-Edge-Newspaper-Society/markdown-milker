@@ -14,9 +14,16 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const crepeInstance = useRef<Crepe | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
+  const currentValueRef = useRef<string>(value)
+
+  useEffect(() => {
+    currentValueRef.current = value
+  }, [value])
 
   useEffect(() => {
     if (!editorRef.current || isInitialized) return
+
+    let changeInterval: NodeJS.Timeout | null = null
 
     const initializeEditor = async () => {
       try {
@@ -24,9 +31,8 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
           root: editorRef.current!,
           defaultValue: value,
           featureConfigs: {
-            // Configure features you want
             toolbar: true,
-            preview: false, // Disable preview to avoid conflicts
+            preview: false,
           }
         })
 
@@ -35,12 +41,14 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
 
         // Set up change listener
         if (onChange) {
-          // Listen for changes using Milkdown's API
           const handleChange = () => {
             if (crepeInstance.current) {
               try {
                 const markdown = crepeInstance.current.getMarkdown()
-                onChange(markdown)
+                // Only call onChange if the content actually changed and is different from current value
+                if (markdown !== currentValueRef.current) {
+                  onChange(markdown)
+                }
               } catch (error) {
                 console.error('Error getting markdown:', error)
               }
@@ -48,17 +56,7 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
           }
 
           // Use a simple interval to check for changes
-          // This is a workaround since Crepe's event system can be tricky
-          const changeInterval = setInterval(handleChange, 1000)
-          
-          // Cleanup function
-          return () => {
-            clearInterval(changeInterval)
-            if (crepeInstance.current) {
-              crepeInstance.current.destroy()
-              crepeInstance.current = null
-            }
-          }
+          changeInterval = setInterval(handleChange, 1000)
         }
 
         setIsInitialized(true)
@@ -70,40 +68,20 @@ export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
     initializeEditor()
 
     return () => {
+      if (changeInterval) {
+        clearInterval(changeInterval)
+      }
       if (crepeInstance.current) {
-        crepeInstance.current.destroy()
+        try {
+          crepeInstance.current.destroy()
+        } catch (error) {
+          console.error('Error destroying editor:', error)
+        }
         crepeInstance.current = null
       }
       setIsInitialized(false)
     }
-  }, []) // Remove value from dependencies to prevent re-initialization
-
-  // Handle value updates without re-initializing
-  useEffect(() => {
-    if (isInitialized && crepeInstance.current && value !== undefined) {
-      try {
-        const currentContent = crepeInstance.current.getMarkdown()
-        if (currentContent !== value) {
-          // Only update if the content is actually different
-          // This prevents unnecessary updates and potential conflicts
-          crepeInstance.current.action((ctx) => {
-            // Use Milkdown's action API to update content
-            // This is safer than destroying and recreating
-            const view = ctx.get('view')
-            // Simple approach: just set the value if very different
-            if (Math.abs(currentContent.length - value.length) > 10) {
-              editorRef.current!.innerHTML = ''
-              crepeInstance.current!.destroy()
-              setIsInitialized(false)
-              // This will trigger re-initialization with new value
-            }
-          })
-        }
-      } catch (error) {
-        console.error('Error updating content:', error)
-      }
-    }
-  }, [value, isInitialized])
+  }, []) // Only run once on mount
 
   return (
     <div className="h-full">
