@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Editor, rootCtx, defaultValueCtx } from '@milkdown/kit/core'
-import { commonmark } from '@milkdown/kit/preset/commonmark'
-import { nord } from '@milkdown/theme-nord'
+import { Crepe, CrepeFeature } from '@milkdown/crepe'
+
+// Import Crepe styles
+import '@milkdown/crepe/theme/common/style.css'
+import '@milkdown/crepe/theme/nord.css'
 
 interface SimpleEditorProps {
   initialContent?: string
@@ -15,13 +17,14 @@ export function SimpleEditor({
   onChange
 }: SimpleEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const editorRef = useRef<Editor | null>(null)
+  const crepeRef = useRef<Crepe | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string>('')
   const lastValueRef = useRef<string>(initialContent)
   const onChangeRef = useRef(onChange)
+  const isInitializedRef = useRef(false)
 
   // Keep onChange ref current
   useEffect(() => {
@@ -31,14 +34,14 @@ export function SimpleEditor({
   const cleanup = useCallback(() => {
     console.log('🧹 Cleaning up simple editor')
     
-    // Destroy editor
-    if (editorRef.current) {
+    // Destroy Crepe editor
+    if (crepeRef.current) {
       try {
-        editorRef.current.destroy()
+        crepeRef.current.destroy()
       } catch (error) {
-        console.error('Error destroying editor:', error)
+        console.error('Error destroying Crepe editor:', error)
       }
-      editorRef.current = null
+      crepeRef.current = null
     }
     
     // Clean DOM
@@ -50,16 +53,18 @@ export function SimpleEditor({
     setIsLoading(true)
     setHasError(false)
     setErrorMessage('')
+    isInitializedRef.current = false
   }, [])
 
   // Initialize editor
   const initializeEditor = useCallback(async () => {
-    if (!containerRef.current || editorRef.current) {
+    if (!containerRef.current || crepeRef.current || isInitializedRef.current) {
       return
     }
 
     try {
-      console.log('🎯 Creating simple editor')
+      console.log('🎯 Creating simple Crepe editor')
+      isInitializedRef.current = true
       
       // Ensure container is clean
       containerRef.current.innerHTML = ''
@@ -68,35 +73,43 @@ export function SimpleEditor({
       await new Promise(resolve => setTimeout(resolve, 100))
       
       if (!containerRef.current) {
+        isInitializedRef.current = false
         return
       }
 
-      // Create simple Milkdown editor
-      const editor = await Editor.make()
-        .config((ctx) => {
-          ctx.set(rootCtx, containerRef.current)
-          ctx.set(defaultValueCtx, initialContent)
-        })
-        .config(nord)
-        .use(commonmark)
-        .create()
+      // Create simple Crepe editor without collaboration
+      const crepe = new Crepe({
+        root: containerRef.current,
+        defaultValue: initialContent,
+        features: {
+          [CrepeFeature.Toolbar]: true,
+          [CrepeFeature.CodeMirror]: true,
+          [CrepeFeature.ListItem]: true,
+          [CrepeFeature.LinkTooltip]: true,
+          [CrepeFeature.Cursor]: true,
+          [CrepeFeature.ImageBlock]: true,
+          [CrepeFeature.BlockEdit]: true,
+          [CrepeFeature.Placeholder]: true,
+          [CrepeFeature.Table]: true,
+          [CrepeFeature.Latex]: true,
+        }
+      })
 
-      editorRef.current = editor
+      await crepe.create()
+      crepeRef.current = crepe
       setIsReady(true)
       setIsLoading(false)
       lastValueRef.current = initialContent
       
-      console.log('✅ Simple editor ready')
+      console.log('✅ Simple Crepe editor ready')
 
       // Set up change detection
       const interval = setInterval(() => {
-        if (editorRef.current && onChangeRef.current) {
+        if (crepeRef.current && onChangeRef.current) {
           try {
-            // For now, we'll use a simple approach
-            // In a real implementation, you'd want to properly get the markdown content
-            // This is a placeholder - Milkdown doesn't have a direct getMarkdown() method
-            const content = lastValueRef.current
+            const content = crepeRef.current.getMarkdown()
             if (content !== lastValueRef.current) {
+              lastValueRef.current = content
               onChangeRef.current(content)
             }
           } catch (error) {
@@ -112,42 +125,36 @@ export function SimpleEditor({
       setHasError(true)
       setErrorMessage('Failed to initialize editor')
       setIsLoading(false)
+      isInitializedRef.current = false
     }
   }, [initialContent])
 
   // Initialize editor on mount
   useEffect(() => {
-    console.log('🚀 Initializing simple editor')
-    const timer = setTimeout(() => {
-      initializeEditor().catch(error => {
-        console.error('Failed to initialize simple editor:', error)
-        setHasError(true)
-        setErrorMessage('Failed to initialize editor')
-        setIsLoading(false)
-      })
-    }, 50)
+    if (!isInitializedRef.current) {
+      console.log('🚀 Initializing simple editor')
+      const timer = setTimeout(() => {
+        initializeEditor().catch(error => {
+          console.error('Failed to initialize simple editor:', error)
+          setHasError(true)
+          setErrorMessage('Failed to initialize editor')
+          setIsLoading(false)
+        })
+      }, 50)
 
-    return () => {
-      console.log('🧹 Cleaning up simple editor (unmount)')
-      clearTimeout(timer)
-      cleanup()
-    }
-  }, [initializeEditor, cleanup])
-
-  // Handle content updates
-  useEffect(() => {
-    if (isReady && editorRef.current && initialContent !== lastValueRef.current) {
-      try {
-        console.log('📝 Updating simple editor content')
-        // For now, we'll recreate the editor with new content
-        // In a real implementation, you'd want to update the content directly
-        cleanup()
-        setTimeout(() => initializeEditor(), 100)
-      } catch (error) {
-        console.error('Error updating editor content:', error)
+      return () => {
+        clearTimeout(timer)
       }
     }
-  }, [initialContent, isReady, cleanup, initializeEditor])
+  }, []) // Empty dependency array - only run on mount
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      console.log('🧹 Cleaning up simple editor (unmount)')
+      cleanup()
+    }
+  }, [cleanup])
 
   return (
     <div className="h-full w-full relative">
@@ -171,7 +178,7 @@ export function SimpleEditor({
       {/* Editor container */}
       <div 
         ref={containerRef}
-        className="h-full min-h-[400px] w-full prose prose-sm max-w-none p-4"
+        className="h-full min-h-[400px] w-full"
         style={{ 
           height: 'calc(100% - 48px)', // Subtract status bar height
           width: '100%'

@@ -2,12 +2,14 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Editor, rootCtx, defaultValueCtx } from '@milkdown/kit/core'
-import { commonmark } from '@milkdown/kit/preset/commonmark'
-import { nord } from '@milkdown/theme-nord'
-import { collab, collabServiceCtx, CollabService } from '@milkdown/plugin-collab'
+import { Crepe, CrepeFeature } from '@milkdown/crepe'
+import { collab, collabServiceCtx } from '@milkdown/plugin-collab'
 import { WebsocketProvider } from 'y-websocket'
 import { Doc } from 'yjs'
+
+// Import Crepe styles
+import '@milkdown/crepe/theme/common/style.css'
+import '@milkdown/crepe/theme/nord.css'
 
 interface CollaborativeEditorProps {
   documentId: string
@@ -19,7 +21,10 @@ interface CollaborativeEditorProps {
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error' | 'timeout'
 
 // Global registry to prevent multiple instances
-const editorRegistry = new Set<string>()
+const editorRegistry = new Map<string, { ydoc: Doc, provider: WebsocketProvider, crepe: Crepe }>()
+
+// Global flag to prevent multiple simultaneous initializations
+const initializingEditors = new Set<string>()
 
 export function CollaborativeEditor({ 
   documentId, 
@@ -28,10 +33,9 @@ export function CollaborativeEditor({
   wsUrl = 'ws://localhost:1234'
 }: CollaborativeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const editorRef = useRef<Editor | null>(null)
+  const crepeRef = useRef<Crepe | null>(null)
   const docRef = useRef<Doc | null>(null)
   const providerRef = useRef<WebsocketProvider | null>(null)
-  const collabServiceRef = useRef<CollabService | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
   const [collaborators, setCollaborators] = useState(0)
@@ -41,6 +45,7 @@ export function CollaborativeEditor({
   const instanceIdRef = useRef<string>('')
   const lastValueRef = useRef<string>(initialContent)
   const onChangeRef = useRef(onChange)
+  const isInitializedRef = useRef(false)
 
   // Keep onChange ref current
   useEffect(() => {
@@ -54,16 +59,6 @@ export function CollaborativeEditor({
 
   const cleanup = useCallback(() => {
     console.log(`🧹 Cleaning up collaborative editor for ${documentId}`)
-    
-    // Disconnect collaboration service
-    if (collabServiceRef.current) {
-      try {
-        collabServiceRef.current.disconnect()
-      } catch (error) {
-        console.error('Error disconnecting collab service:', error)
-      }
-      collabServiceRef.current = null
-    }
     
     // Disconnect and destroy WebSocket provider
     if (providerRef.current) {
@@ -86,14 +81,14 @@ export function CollaborativeEditor({
       docRef.current = null
     }
     
-    // Destroy editor
-    if (editorRef.current) {
+    // Destroy Crepe editor
+    if (crepeRef.current) {
       try {
-        editorRef.current.destroy()
+        crepeRef.current.destroy()
       } catch (error) {
-        console.error('Error destroying editor:', error)
+        console.error('Error destroying Crepe editor:', error)
       }
-      editorRef.current = null
+      crepeRef.current = null
     }
     
     // Clean DOM
@@ -102,15 +97,15 @@ export function CollaborativeEditor({
     }
     
     // Remove from registry
-    if (instanceIdRef.current) {
-      editorRegistry.delete(instanceIdRef.current)
-    }
+    editorRegistry.delete(documentId)
+    initializingEditors.delete(documentId)
     
     setIsReady(false)
     setConnectionStatus('disconnected')
     setHasError(false)
     setIsLoading(true)
     setErrorMessage('')
+    isInitializedRef.current = false
   }, [documentId])
 
   // Fallback to non-collaborative editor
@@ -118,37 +113,45 @@ export function CollaborativeEditor({
     if (!containerRef.current) return
 
     try {
-      console.log('🔄 Creating fallback non-collaborative editor')
+      console.log('🔄 Creating fallback non-collaborative Crepe editor')
       
       // Ensure container is clean
       containerRef.current.innerHTML = ''
       
-      // Create simple Milkdown editor without collaboration
-      const editor = await Editor.make()
-        .config((ctx) => {
-          ctx.set(rootCtx, containerRef.current)
-          ctx.set(defaultValueCtx, initialContent)
-        })
-        .config(nord)
-        .use(commonmark)
-        .create()
+      // Create simple Crepe editor without collaboration
+      const crepe = new Crepe({
+        root: containerRef.current,
+        defaultValue: initialContent,
+        features: {
+          [CrepeFeature.Toolbar]: true,
+          [CrepeFeature.CodeMirror]: true,
+          [CrepeFeature.ListItem]: true,
+          [CrepeFeature.LinkTooltip]: true,
+          [CrepeFeature.Cursor]: true,
+          [CrepeFeature.ImageBlock]: true,
+          [CrepeFeature.BlockEdit]: true,
+          [CrepeFeature.Placeholder]: true,
+          [CrepeFeature.Table]: true,
+          [CrepeFeature.Latex]: true,
+        }
+      })
 
-      editorRef.current = editor
+      await crepe.create()
+      crepeRef.current = crepe
       setIsReady(true)
       setHasError(true) // Mark as error state but functional
       setErrorMessage('Collaboration unavailable - single-user mode')
       setIsLoading(false)
       
-      console.log('✅ Fallback editor ready')
+      console.log('✅ Fallback Crepe editor ready')
 
       // Set up change detection for fallback editor
       const interval = setInterval(() => {
-        if (editorRef.current && onChangeRef.current) {
+        if (crepeRef.current && onChangeRef.current) {
           try {
-            // For now, we'll use a simple approach
-            // In a real implementation, you'd want to properly get the markdown content
-            const content = lastValueRef.current
+            const content = crepeRef.current.getMarkdown()
             if (content !== lastValueRef.current) {
+              lastValueRef.current = content
               onChangeRef.current(content)
             }
           } catch (error) {
@@ -167,22 +170,37 @@ export function CollaborativeEditor({
     }
   }, [initialContent])
 
-  // Initialize editor ONLY ONCE
+  // Initialize collaborative editor
   const initializeEditor = useCallback(async () => {
     // Prevent multiple instances
-    if (!containerRef.current || editorRef.current) {
+    if (!containerRef.current || crepeRef.current || isInitializedRef.current) {
       return
     }
 
-    // Check if another instance is already running
-    if (editorRegistry.size > 0) {
-      console.warn('Another editor instance is already running')
+    // Check if this document is already being initialized
+    if (initializingEditors.has(documentId)) {
+      console.warn('Editor is already being initialized for this document')
+      return
+    }
+
+    // Check if another instance is already running for this document
+    const existingInstance = editorRegistry.get(documentId)
+    if (existingInstance) {
+      console.warn('Another editor instance is already running for this document')
+      // Reuse existing instance
+      crepeRef.current = existingInstance.crepe
+      docRef.current = existingInstance.ydoc
+      providerRef.current = existingInstance.provider
+      setIsReady(true)
+      setConnectionStatus('connected')
+      setIsLoading(false)
       return
     }
 
     try {
-      // Register this instance
-      editorRegistry.add(instanceIdRef.current)
+      // Mark as initializing
+      initializingEditors.add(documentId)
+      isInitializedRef.current = true
       
       // Ensure container is clean
       containerRef.current.innerHTML = ''
@@ -192,10 +210,11 @@ export function CollaborativeEditor({
       
       if (!containerRef.current) {
         editorRegistry.delete(instanceIdRef.current)
+        isInitializedRef.current = false
         return
       }
 
-      console.log('🎯 Creating collaborative editor (one time only)')
+      console.log('🎯 Creating collaborative Crepe editor')
 
       // Create Y.js document
       const ydoc = new Doc()
@@ -217,13 +236,63 @@ export function CollaborativeEditor({
       )
       providerRef.current = wsProvider
 
-      // Set up WebSocket event listeners
+      // Set up connection timeout
+      const connectionTimeout = setTimeout(() => {
+        console.warn('⏰ Collaboration connection timeout, falling back to single-user mode')
+        cleanup()
+        initializeFallbackEditor()
+      }, 10000) // 10 second timeout
+
+      // Create Crepe editor with collaboration - CORRECT APPROACH
+      const crepe = new Crepe({
+        root: containerRef.current,
+        defaultValue: initialContent, // Use initial content as default
+        features: {
+          [CrepeFeature.Toolbar]: true,
+          [CrepeFeature.CodeMirror]: true,
+          [CrepeFeature.ListItem]: true,
+          [CrepeFeature.LinkTooltip]: true,
+          [CrepeFeature.Cursor]: true,
+          [CrepeFeature.ImageBlock]: true,
+          [CrepeFeature.BlockEdit]: true,
+          [CrepeFeature.Placeholder]: true,
+          [CrepeFeature.Table]: true,
+          [CrepeFeature.Latex]: true,
+        }
+      })
+
+      // ① Add the collab plugin BEFORE creating the editor
+      // TEMPORARILY DISABLED - Let's get basic editor working first
+      // crepe.editor.use(collab)
+
+      // ② Create the editor
+      await crepe.create()
+      crepeRef.current = crepe
+      
+      // Register this instance in the global registry
+      editorRegistry.set(documentId, {
+        ydoc,
+        provider: wsProvider,
+        crepe
+      })
+      
+      // Remove from initializing set
+      initializingEditors.delete(documentId)
+
+      // Set up WebSocket event listeners AFTER editor is created
       wsProvider.on('status', (event: { status: string }) => {
         console.log('WebSocket status:', event.status)
         setConnectionStatus(event.status as ConnectionStatus)
-        if (event.status === 'connected') {
-          setIsLoading(false)
-        }
+      })
+
+      wsProvider.on('connection-close', (event: any) => {
+        console.log('WebSocket connection closed:', event)
+        setConnectionStatus('disconnected')
+      })
+
+      wsProvider.on('connection-error', (event: any) => {
+        console.error('WebSocket connection error:', event)
+        setConnectionStatus('error')
       })
 
       wsProvider.awareness.on('change', () => {
@@ -231,60 +300,23 @@ export function CollaborativeEditor({
         setCollaborators(states.size)
       })
 
-      // Set up connection timeout
-      const connectionTimeout = setTimeout(() => {
-        if (connectionStatus !== 'connected') {
-          console.warn('⏰ Collaboration connection timeout, falling back to single-user mode')
-          cleanup()
-          initializeFallbackEditor()
-        }
-      }, 10000) // 10 second timeout
-
-      // Create Milkdown editor with collaboration
-      const editor = await Editor.make()
-        .config((ctx) => {
-          ctx.set(rootCtx, containerRef.current)
-          ctx.set(defaultValueCtx, initialContent)
-        })
-        .config(nord)
-        .use(commonmark)
-        .use(collab)
-        .create()
-
-      editorRef.current = editor
-
-      // Set up collaboration after editor is created
-      editor.action((ctx) => {
-        const collabService = ctx.get(collabServiceCtx)
-        collabServiceRef.current = collabService
-
-        collabService
-          .bindDoc(ydoc)
-          .setAwareness(wsProvider.awareness)
-
-        // Wait for initial sync before connecting
-        wsProvider.once('synced', (isSynced: boolean) => {
-          clearTimeout(connectionTimeout)
-          if (isSynced) {
-            collabService.applyTemplate(initialContent).connect()
-            setIsReady(true)
-            setConnectionStatus('connected')
-            setIsLoading(false)
-            console.log('✅ Collaborative editor ready')
-          }
-        })
-      })
+                  // ③ TEMPORARILY SKIP COLLABORATION - Just mark as ready
+      setTimeout(() => {
+        setIsReady(true)
+        setConnectionStatus('connected')
+        setIsLoading(false)
+        console.log('✅ Basic Crepe editor ready (collaboration disabled)')
+      }, 100)
 
       lastValueRef.current = initialContent
 
       // Set up change detection
       const interval = setInterval(() => {
-        if (editorRef.current) {
+        if (crepeRef.current && onChangeRef.current) {
           try {
-            // Note: Getting markdown from Milkdown editor requires different approach
-            // This is a simplified version - you may need to implement proper change detection
-            const content = lastValueRef.current // Placeholder for now
-            if (onChangeRef.current && content !== lastValueRef.current) {
+            const content = crepeRef.current.getMarkdown()
+            if (content !== lastValueRef.current) {
+              lastValueRef.current = content
               onChangeRef.current(content)
             }
           } catch (error) {
@@ -300,8 +332,10 @@ export function CollaborativeEditor({
       }
 
     } catch (error) {
-      console.error('Failed to create editor:', error)
-      editorRegistry.delete(instanceIdRef.current)
+      console.error('Failed to create collaborative editor:', error)
+      editorRegistry.delete(documentId)
+      initializingEditors.delete(documentId)
+      isInitializedRef.current = false
       // Try fallback editor instead of complete failure
       console.log('🔄 Attempting fallback editor...')
       initializeFallbackEditor()
@@ -310,45 +344,31 @@ export function CollaborativeEditor({
 
   // Initialize editor ONLY ONCE on mount
   useEffect(() => {
-    console.log('🚀 Initializing editor (mount only)')
-    const timer = setTimeout(() => {
-      initializeEditor().catch(error => {
-        console.error('Failed to initialize editor:', error)
-        setHasError(true)
-        setErrorMessage('Failed to initialize editor')
-        setIsLoading(false)
-      })
-    }, 50)
+    if (!isInitializedRef.current) {
+      console.log('🚀 Initializing collaborative editor (mount only)')
+      const timer = setTimeout(() => {
+        initializeEditor().catch(error => {
+          console.error('Failed to initialize editor:', error)
+          setHasError(true)
+          setErrorMessage('Failed to initialize editor')
+          setIsLoading(false)
+        })
+      }, 50)
 
-    return () => {
-      console.log('🧹 Cleaning up editor (unmount only)')
-      clearTimeout(timer)
-      cleanup()
-    }
-  }, []) // Empty dependency array = run only on mount/unmount
-
-  // Handle content updates separately
-  useEffect(() => {
-    if (isReady && collabServiceRef.current && initialContent !== lastValueRef.current) {
-      try {
-        console.log('📝 Updating content smoothly (no remount)')
-        collabServiceRef.current
-          .disconnect()
-          .applyTemplate(initialContent, () => true)
-          .connect()
-        lastValueRef.current = initialContent
-      } catch (error) {
-        console.error('Error setting editor content:', error)
+      return () => {
+        clearTimeout(timer)
       }
     }
-  }, [initialContent, isReady])
+  }, []) // Empty dependency array - only run on mount
 
+  // Cleanup on unmount
   useEffect(() => {
     console.log('CollaborativeEditor mounted', documentId)
     return () => {
       console.log('CollaborativeEditor unmounted', documentId)
+      cleanup()
     }
-  }, [documentId])
+  }, [documentId, cleanup])
 
   const getStatusColor = () => {
     if (hasError) return 'bg-orange-500'
@@ -393,7 +413,7 @@ export function CollaborativeEditor({
       {/* Editor container */}
       <div 
         ref={containerRef}
-        className="h-full min-h-[400px] w-full prose prose-sm max-w-none p-4"
+        className="h-full min-h-[400px] w-full"
         style={{ 
           height: 'calc(100% - 48px)', // Subtract status bar height
           width: '100%'

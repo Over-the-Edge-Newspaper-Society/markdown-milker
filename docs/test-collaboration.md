@@ -1,26 +1,17 @@
-# Collaboration Test
+sdafadada
 
-This is a test file to verify that the collaborative editor is working.
+a
 
-## Features to Test
+sf
 
-1. **Real-time collaboration** - Multiple users can edit simultaneously
-2. **Auto-save** - Changes are saved automatically
-3. **Fallback mode** - Single-user mode when collaboration is unavailable
+fsadfasdfasfsafsafsfs
 
-## Test Content
+asd
 
-- [ ] Basic markdown rendering
-- [ ] Lists and checkboxes
-- [ ] **Bold** and *italic* text
-- [ ] Code blocks
+f
 
-```javascript
-console.log('Hello, collaborative world!');
-```
+sa
 
-> This is a blockquote to test styling.
+fs
 
-### Status
-
-If you can see this content in the editor, the basic functionality is working! ✅ 
+af
