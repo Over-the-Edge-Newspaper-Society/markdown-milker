@@ -29,13 +29,14 @@ const nextConfig = {
       }
 
       // Handle Y.js imports to prevent duplicate loading
+      const path = require('path')
+      const resolvePackageDir = pkg => path.join(path.dirname(require.resolve(pkg)), '..')
       config.resolve.alias = {
         ...config.resolve.alias,
-        'yjs': require.resolve('yjs'),
-        'y-websocket': require.resolve('y-websocket'),
-        'y-prosemirror': require.resolve('y-prosemirror'),
-        'lib0': require.resolve('lib0'),
-        'lib0/mutex': require.resolve('lib0/mutex'),
+        'yjs': resolvePackageDir('yjs'),
+        'y-websocket': resolvePackageDir('y-websocket'),
+        'y-prosemirror': resolvePackageDir('y-prosemirror'),
+        'lib0': resolvePackageDir('lib0'),
       }
     }
 
@@ -47,7 +48,6 @@ const nextConfig = {
         'y-websocket': 'commonjs y-websocket',
         'y-prosemirror': 'commonjs y-prosemirror',
         'lib0': 'commonjs lib0',
-        'lib0/mutex': 'commonjs lib0/mutex',
       })
     }
 
