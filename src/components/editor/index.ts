@@ -1,12 +1,13 @@
 // src/components/editor/index.ts
-// Main editor components
-export { CollaborativeEditor } from './CollaborativeEditor'
+// Working editor components
 export { SimpleEditor } from './SimpleEditor'
-export { ExtendedCrepeEditor } from './ExtendedCrepeEditor'
-export { TrueCollaborativeCrepe } from './TrueCollaborativeCrepe'
+export { WorkingCollaborativeCrepe } from './WorkingCollaborativeCrepe'
 
 // Utility components
 export { SaveStatus } from './save-status'
+
+// Keep basic collaborative editor as fallback
+export { CollaborativeEditor } from './CollaborativeEditor'
 
 // Re-export types for convenience
 export type { 

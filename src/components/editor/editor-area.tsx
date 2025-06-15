@@ -3,29 +3,22 @@
 
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { useFileStore } from '@/lib/stores/file-store'
-import { CollaborativeEditor } from './CollaborativeEditor'
 import { SimpleEditor } from './SimpleEditor'
-// Optional imports - these components may not exist yet
-let CrepeCollaborativeEditor: any = null
-let ExtendedCrepeEditor: any = null
 
+// Import the working collaborative Crepe editor
+let WorkingCollaborativeCrepe: any = null
 try {
-  CrepeCollaborativeEditor = require('./CrepeCollaborativeEditor').CrepeCollaborativeEditor
+  WorkingCollaborativeCrepe = require('./WorkingCollaborativeCrepe').WorkingCollaborativeCrepe
 } catch (e) {
-  console.log('CrepeCollaborativeEditor not available yet')
+  console.log('WorkingCollaborativeCrepe not available')
 }
 
-try {
-  ExtendedCrepeEditor = require('./ExtendedCrepeEditor').ExtendedCrepeEditor
-} catch (e) {
-  console.log('ExtendedCrepeEditor not available yet')
-}
 import { SaveStatus } from './save-status'
 import { useEffect, useCallback, useState, useMemo } from 'react'
 import { X, FileText, Users, ChevronDown } from 'lucide-react'
 import debounce from 'lodash/debounce'
 
-type EditorMode = 'crepe-solo' | 'crepe-styled-collab' | 'crepe-extended-collab' | 'vanilla-collab'
+type EditorMode = 'collaborative' | 'solo'
 
 export function EditorArea() {
   const { 
@@ -38,7 +31,7 @@ export function EditorArea() {
   } = useEditorStore()
   const { selectedFile, closeFile } = useFileStore()
   const [fileContent, setFileContent] = useState('')
-  const [editorMode, setEditorMode] = useState<EditorMode>('crepe-solo')
+  const [editorMode, setEditorMode] = useState<EditorMode>('collaborative')
   const [isFileLoaded, setIsFileLoaded] = useState(false)
   const [showModeDropdown, setShowModeDropdown] = useState(false)
 
@@ -46,44 +39,21 @@ export function EditorArea() {
   const documentId = useMemo(() => selectedFile?.replace(/[^a-zA-Z0-9]/g, '_') || '', [selectedFile])
 
   const editorModes = [
+    ...(WorkingCollaborativeCrepe ? [{ 
+      value: 'collaborative' as EditorMode, 
+      label: 'Collaborative', 
+      description: 'Full Crepe editor with real-time collaboration',
+      icon: '🚀'
+    }] : []),
     { 
-      value: 'crepe-solo' as EditorMode, 
-      label: 'Crepe Solo', 
-      description: 'Beautiful Crepe editor, single-user',
+      value: 'solo' as EditorMode, 
+      label: 'Solo Mode', 
+      description: 'Single-user Crepe editor',
       icon: '✨'
-    },
-    ...(CrepeCollaborativeEditor ? [{ 
-      value: 'crepe-styled-collab' as EditorMode, 
-      label: 'Crepe-Styled Collaborative', 
-      description: 'Crepe design with collaboration',
-      icon: '🎨'
-    }] : []),
-    ...(ExtendedCrepeEditor ? [{ 
-      value: 'crepe-extended-collab' as EditorMode, 
-      label: 'Extended Crepe', 
-      description: 'Real Crepe + collaboration (experimental)',
-      icon: '🔬'
-    }] : []),
-    { 
-      value: 'vanilla-collab' as EditorMode, 
-      label: 'Vanilla Collaborative', 
-      description: 'Basic Milkdown with collaboration',
-      icon: '⚡'
     }
   ]
 
   const currentMode = editorModes.find(mode => mode.value === editorMode) || editorModes[0]
-
-  // Debug logging
-  console.log('📊 EditorArea render:', {
-    selectedFile,
-    currentFilePath,
-    contentLength: currentContent?.length || 0,
-    fileContentLength: fileContent?.length || 0,
-    hasContent: !!currentContent,
-    editorMode,
-    isFileLoaded
-  })
 
   // Debounced save function
   const debouncedSave = useCallback(
@@ -101,8 +71,6 @@ export function EditorArea() {
           console.error('❌ Failed to save:', error)
           setSaveStatus('unsaved')
         }
-      } else {
-        console.log('⏸️ Skipping save - file not loaded yet')
       }
     }, 2000),
     [selectedFile, saveFile, setSaveStatus, setContent, isFileLoaded]
@@ -122,8 +90,7 @@ export function EditorArea() {
           console.log('📄 File loaded:', {
             file: selectedFile,
             hasContent: data.content !== undefined,
-            contentLength: data.content?.length || 0,
-            preview: data.content?.substring(0, 100) + '...'
+            contentLength: data.content?.length || 0
           })
           
           if (data.content !== undefined) {
@@ -148,7 +115,6 @@ export function EditorArea() {
           setIsFileLoaded(true)
         })
     } else {
-      console.log('📁 No file selected, clearing content')
       setCurrentFilePath(null)
       setContent('')
       setFileContent('')
@@ -161,8 +127,6 @@ export function EditorArea() {
   const handleEditorChange = useCallback((content: string) => {
     console.log('✏️ Editor content changed:', {
       contentLength: content.length,
-      firstLine: content.split('\n')[0]?.substring(0, 50) + '...',
-      isFileLoaded,
       mode: editorMode
     })
     
@@ -170,8 +134,6 @@ export function EditorArea() {
       setFileContent(content)
       setSaveStatus('unsaved')
       debouncedSave(content)
-    } else {
-      console.log('⏸️ Ignoring content change - file not loaded yet')
     }
   }, [debouncedSave, setSaveStatus, isFileLoaded, editorMode])
 
@@ -191,10 +153,7 @@ export function EditorArea() {
     closeFile()
   }
 
-  const isCollaborative = editorMode !== 'crepe-solo' && 
-    (editorMode === 'vanilla-collab' || 
-     (editorMode === 'crepe-styled-collab' && CrepeCollaborativeEditor) || 
-     (editorMode === 'crepe-extended-collab' && ExtendedCrepeEditor))
+  const isCollaborative = editorMode === 'collaborative' && WorkingCollaborativeCrepe
 
   if (!selectedFile) {
     return (
@@ -207,7 +166,7 @@ export function EditorArea() {
               Select a markdown file from the sidebar to start editing
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              ✨ Starting with beautiful Crepe editor • Auto-save enabled
+              🚀 Collaborative Crepe editor ready • Auto-save enabled
             </p>
           </div>
         </div>
@@ -237,7 +196,21 @@ export function EditorArea() {
     }
 
     switch (editorMode) {
-      case 'crepe-solo':
+      case 'collaborative':
+        if (WorkingCollaborativeCrepe) {
+          return <WorkingCollaborativeCrepe key={editorKey} {...commonProps} />
+        } else {
+          console.warn('WorkingCollaborativeCrepe not available, falling back to solo mode')
+          return (
+            <SimpleEditor
+              key={`simple-${selectedFile}`}
+              initialContent={fileContent}
+              onChange={handleEditorChange}
+            />
+          )
+        }
+
+      case 'solo':
         return (
           <SimpleEditor
             key={`simple-${selectedFile}`}
@@ -245,25 +218,6 @@ export function EditorArea() {
             onChange={handleEditorChange}
           />
         )
-      
-      case 'crepe-styled-collab':
-        if (CrepeCollaborativeEditor) {
-          return <CrepeCollaborativeEditor key={editorKey} {...commonProps} />
-        } else {
-          console.warn('CrepeCollaborativeEditor not available, falling back to vanilla collab')
-          return <CollaborativeEditor key={editorKey} {...commonProps} />
-        }
-      
-      case 'crepe-extended-collab':
-        if (ExtendedCrepeEditor) {
-          return <ExtendedCrepeEditor key={editorKey} {...commonProps} />
-        } else {
-          console.warn('ExtendedCrepeEditor not available, falling back to vanilla collab')
-          return <CollaborativeEditor key={editorKey} {...commonProps} />
-        }
-      
-      case 'vanilla-collab':
-        return <CollaborativeEditor key={editorKey} {...commonProps} />
       
       default:
         return (
