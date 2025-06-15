@@ -1,7 +1,7 @@
 // src/components/editor/image-picker.tsx
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,7 +20,8 @@ import {
   Search, 
   Check,
   FileImage,
-  Eye
+  Eye,
+  X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editor-store'
@@ -36,12 +37,26 @@ interface ImageAsset {
 
 interface ImagePickerProps {
   onImageSelect: (imagePath: string) => void
-  trigger?: React.ReactNode
+  trigger?: React.ReactNode | null
   activeDir?: string
+  open?: boolean // Controlled open state
+  onOpenChange?: (open: boolean) => void // Controlled open change
 }
 
-export function ImagePicker({ onImageSelect, trigger, activeDir = 'docs' }: ImagePickerProps) {
-  const [open, setOpen] = useState(false)
+// Ref interface for programmatic control
+export interface ImagePickerRef {
+  open: () => void
+  close: () => void
+}
+
+export const ImagePicker = forwardRef<ImagePickerRef, ImagePickerProps>(({ 
+  onImageSelect, 
+  trigger, 
+  activeDir = 'docs',
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange
+}, ref) => {
+  const [internalOpen, setInternalOpen] = useState(false)
   const [assets, setAssets] = useState<ImageAsset[]>([])
   const [filteredAssets, setFilteredAssets] = useState<ImageAsset[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -54,12 +69,23 @@ export function ImagePicker({ onImageSelect, trigger, activeDir = 'docs' }: Imag
   
   const { uploadImage, getAssetImages } = useEditorStore()
 
+  // Determine if this is controlled or uncontrolled
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen
+
+  // Expose methods via ref for programmatic control
+  useImperativeHandle(ref, () => ({
+    open: () => setOpen(true),
+    close: () => setOpen(false)
+  }), [setOpen])
+
   // Load assets when dialog opens
   useEffect(() => {
     if (open) {
       loadAssets()
     }
-  }, [open])
+  }, [open, activeDir])
 
   // Filter assets based on search term
   useEffect(() => {
@@ -137,6 +163,7 @@ export function ImagePicker({ onImageSelect, trigger, activeDir = 'docs' }: Imag
       
       // Auto-select the newly uploaded image
       setSelectedAsset(result.relativePath)
+      setPreviewImage(result.path)
       
       setTimeout(() => {
         setUploadProgress(0)
@@ -153,17 +180,23 @@ export function ImagePicker({ onImageSelect, trigger, activeDir = 'docs' }: Imag
 
   const handleImageSelect = () => {
     if (selectedAsset) {
+      console.log('📸 Image selected from picker:', selectedAsset)
       onImageSelect(selectedAsset)
-      setOpen(false)
-      setSelectedAsset(null)
-      setSearchTerm('')
-      setPreviewImage(null)
+      handleDialogClose()
     }
   }
 
   const handleAssetClick = (asset: ImageAsset) => {
     setSelectedAsset(asset.relativePath)
     setPreviewImage(asset.path)
+  }
+
+  const handleDialogClose = () => {
+    setOpen(false)
+    // Reset state when closing
+    setSelectedAsset(null)
+    setSearchTerm('')
+    setPreviewImage(null)
   }
 
   const formatFileSize = (bytes: number): string => {
@@ -178,17 +211,240 @@ export function ImagePicker({ onImageSelect, trigger, activeDir = 'docs' }: Imag
     return new Date(dateString).toLocaleDateString()
   }
 
-  const handleDialogClose = (newOpen: boolean) => {
-    setOpen(newOpen)
-    if (!newOpen) {
-      setSelectedAsset(null)
-      setSearchTerm('')
-      setPreviewImage(null)
-    }
+  // If no trigger is provided and it's controlled, render just the dialog
+  if (trigger === null && isControlled) {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-6xl h-[75vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-6 pb-0 flex-shrink-0 flex flex-row items-center justify-between">
+            <div>
+              <DialogTitle>Insert Image</DialogTitle>
+              <DialogDescription>
+                Choose an existing image or upload a new one to your assets library ({activeDir}/_assets).
+              </DialogDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDialogClose}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogHeader>
+
+          <div className="flex flex-1 gap-0 overflow-hidden min-h-0">
+            {/* Left Panel - Upload and Library */}
+            <div className="flex-1 flex flex-col p-6 pt-4 space-y-4 min-w-0 border-r">
+              {/* Upload Section */}
+              <div className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-sm font-medium">Upload New Image</Label>
+                  {isUploading && (
+                    <div className="text-xs text-muted-foreground">
+                      {uploadProgress}%
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e.target.files)}
+                    className="hidden"
+                  />
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex-1"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isUploading ? 'Uploading...' : 'Choose File'}
+                  </Button>
+                </div>
+                
+                {isUploading && (
+                  <div className="mt-2">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Search Section */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Choose from Library</Label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search images..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              {/* Assets Grid */}
+              <div className="flex-1 border rounded-lg overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-4">
+                    {isLoading ? (
+                      <div className="flex items-center justify-center h-32">
+                        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
+                        <span className="ml-2 text-sm text-muted-foreground">Loading images...</span>
+                      </div>
+                    ) : filteredAssets.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-32 text-center">
+                        <FileImage className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          {searchTerm ? 'No images match your search' : 'No images in library'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {searchTerm ? 'Try a different search term' : 'Upload your first image to get started'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {filteredAssets.map((asset) => (
+                          <div
+                            key={asset.relativePath}
+                            className={cn(
+                              'relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200',
+                              selectedAsset === asset.relativePath
+                                ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800'
+                                : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                            )}
+                            onClick={() => handleAssetClick(asset)}
+                          >
+                            <div className="aspect-square bg-transparent relative overflow-hidden">
+                              <img
+                                src={asset.path}
+                                alt={asset.name}
+                                className="w-full h-full object-cover"
+                                style={{ backgroundColor: 'transparent' }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ0cmFuc3BhcmVudCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4='
+                                }}
+                              />
+                              
+                              {/* Selection Indicator */}
+                              {selectedAsset === asset.relativePath && (
+                                <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <Check className="w-4 h-4 text-white" />
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Hover Info */}
+                              <div className="absolute inset-x-0 bottom-0 bg-black/70 text-white p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <p className="text-xs truncate">{asset.name}</p>
+                                <p className="text-xs text-gray-300">
+                                  {formatFileSize(asset.size)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+
+            {/* Right Panel - Preview */}
+            <div className="w-80 flex flex-col p-6 pt-4 space-y-4 overflow-hidden">
+              {selectedAsset ? (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Preview</Label>
+                    <div className="border rounded-lg p-2 bg-muted/30 overflow-hidden">
+                      <div className="w-full h-48 bg-transparent rounded overflow-hidden flex items-center justify-center">
+                        {previewImage && (
+                          <img
+                            src={previewImage}
+                            alt="Preview"
+                            className="max-w-full max-h-full object-contain"
+                            style={{ backgroundColor: 'transparent' }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Selected Image Info */}
+                  <div className="space-y-2 flex-1">
+                    <Label className="text-sm font-medium">Image Details</Label>
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                      {(() => {
+                        const asset = filteredAssets.find(a => a.relativePath === selectedAsset)
+                        if (!asset) return null
+                        
+                        return (
+                          <>
+                            <p className="text-sm font-medium truncate">{asset.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Size: {formatFileSize(asset.size)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Modified: {formatDate(asset.modified)}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-mono break-all">
+                              Path: {asset.relativePath}
+                            </p>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-center">
+                  <div>
+                    <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Select an image to see preview
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 p-6 pt-4 border-t bg-background flex-shrink-0">
+            <Button 
+              variant="outline" 
+              onClick={handleDialogClose}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleImageSelect}
+              disabled={!selectedAsset}
+            >
+              Insert Image
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
+  // Standard dialog with trigger
   return (
-    <Dialog open={open} onOpenChange={handleDialogClose}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm">
@@ -267,7 +523,7 @@ export function ImagePicker({ onImageSelect, trigger, activeDir = 'docs' }: Imag
               </div>
             </div>
 
-            {/* Assets Grid - Fixed height to prevent layout issues */}
+            {/* Assets Grid */}
             <div className="flex-1 border rounded-lg overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-4">
@@ -336,7 +592,7 @@ export function ImagePicker({ onImageSelect, trigger, activeDir = 'docs' }: Imag
             </div>
           </div>
 
-          {/* Right Panel - Preview (Fixed width, no overlap) */}
+          {/* Right Panel - Preview */}
           <div className="w-80 flex flex-col p-6 pt-4 space-y-4 overflow-hidden">
             {selectedAsset ? (
               <>
@@ -395,11 +651,11 @@ export function ImagePicker({ onImageSelect, trigger, activeDir = 'docs' }: Imag
           </div>
         </div>
 
-        {/* Actions - Fixed at bottom, no overlap */}
+        {/* Actions */}
         <div className="flex justify-end gap-2 p-6 pt-4 border-t bg-background flex-shrink-0">
           <Button 
             variant="outline" 
-            onClick={() => setOpen(false)}
+            onClick={handleDialogClose}
           >
             Cancel
           </Button>
@@ -413,4 +669,6 @@ export function ImagePicker({ onImageSelect, trigger, activeDir = 'docs' }: Imag
       </DialogContent>
     </Dialog>
   )
-}
+})
+
+ImagePicker.displayName = 'ImagePicker'

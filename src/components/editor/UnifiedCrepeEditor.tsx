@@ -20,9 +20,10 @@ import { placeholder } from '@milkdown/crepe/feature/placeholder'
 import { table } from '@milkdown/crepe/feature/table'
 import { toolbar } from '@milkdown/crepe/feature/toolbar'
 
-// Import Crepe styles
+// Import Crepe styles with theme support
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
+import '@milkdown/crepe/theme/frame-dark.css'
 
 // Import image picker
 import { ImagePicker } from './image-picker'
@@ -157,21 +158,143 @@ export function UnifiedCrepeEditor({
     }
   }, [uploadImage])
 
+  // ✅ Unified save function (moved up to fix initialization order)
+  const saveContent = useCallback(async (content: string, context: string = 'auto') => {
+    if (isSavingRef.current || !onChangeRef.current) return false
+    
+    if (content === lastContentRef.current && context !== 'force') {
+      return false
+    }
+
+    try {
+      isSavingRef.current = true
+      console.log(`💾 SAVING [${collaborative ? 'collaborative' : 'solo'}] [${context}]:`, content.length, 'chars')
+      
+      await onChangeRef.current(content)
+      
+      lastContentRef.current = content
+      setSaveCount(prev => prev + 1)
+      setLastSaveTime(new Date())
+      
+      console.log(`✅ SAVE SUCCESS [${context}]`)
+      return true
+    } catch (error) {
+      console.error(`❌ SAVE FAILED [${context}]:`, error)
+      return false
+    } finally {
+      isSavingRef.current = false
+    }
+  }, [collaborative])
+
+  // Fallback method to insert image as markdown
+  const insertMarkdownFallback = useCallback((imagePath: string) => {
+    try {
+      console.log('📸 Using markdown fallback insertion for:', imagePath)
+      const imageMarkdown = `![Image](${imagePath})\n`
+      
+      // Try to get current content and append the image
+      if (builderRef.current && typeof builderRef.current.getMarkdown === 'function') {
+        const currentContent = builderRef.current.getMarkdown()
+        const newContent = currentContent + '\n' + imageMarkdown
+        
+        // Save the new content through the normal save mechanism
+        saveContent(newContent, 'image-insert-fallback')
+        console.log('✅ Image inserted via markdown fallback')
+      } else {
+        // If editor isn't ready, just trigger save with the markdown
+        console.log('✅ Image markdown prepared for insertion')
+        saveContent(imageMarkdown, 'image-insert-fallback-simple')
+      }
+    } catch (error) {
+      console.error('❌ Markdown fallback insertion failed:', error)
+      // Last resort: just notify the user
+      alert('Image uploaded successfully, but could not insert automatically. You can reference it with: ![Image](' + imagePath + ')')
+    }
+  }, [saveContent])
+
+  // Insert image into editor
+  const insertImageIntoEditor = useCallback((imagePath: string) => {
+    if (!builderRef.current || !isReady) {
+      console.warn('Editor not ready for image insertion')
+      // Use fallback if editor isn't ready
+      insertMarkdownFallback(imagePath)
+      return
+    }
+
+    try {
+      console.log('📸 Inserting image into editor:', imagePath)
+      
+      // Check if we can use the CrepeBuilder's getMarkdown method to verify editor state
+      if (typeof builderRef.current.getMarkdown === 'function') {
+        // Editor is ready, try direct insertion
+        try {
+          builderRef.current.editor.action((ctx) => {
+            try {
+              // Get the editor view and schema with proper context names
+              const view = ctx.get('editorViewCtx')
+              const schema = ctx.get('schemaCtx')
+              
+              if (view && view.state && schema) {
+                // Check if image node type exists
+                const imageNodeType = schema.nodes.image || schema.nodes.imageBlock
+                
+                if (imageNodeType) {
+                  // Create image node
+                  const imageNode = imageNodeType.create({
+                    src: imagePath,
+                    alt: 'Uploaded image',
+                    title: ''
+                  })
+                  
+                  // Insert at current cursor position
+                  const { state } = view
+                  const transaction = state.tr.replaceSelectionWith(imageNode)
+                  view.dispatch(transaction)
+                  
+                  console.log('✅ Image inserted successfully via ProseMirror')
+                  return
+                }
+              }
+              
+              // If we get here, fall back to markdown
+              throw new Error('Could not access editor view or schema')
+            } catch (innerError) {
+              console.warn('Inner editor insertion failed:', innerError)
+              throw innerError
+            }
+          })
+        } catch (actionError) {
+          console.warn('Editor action failed, using markdown fallback:', actionError)
+          insertMarkdownFallback(imagePath)
+        }
+      } else {
+        // Editor might not be fully ready, use fallback
+        console.warn('Editor getMarkdown method not available, using fallback')
+        insertMarkdownFallback(imagePath)
+      }
+    } catch (error) {
+      console.error('❌ Failed to insert image:', error)
+      insertMarkdownFallback(imagePath)
+    }
+  }, [isReady, insertMarkdownFallback])
+
   // Handle image selection from picker
   const handleImageSelect = useCallback((imagePath: string) => {
-    if (builderRef.current) {
-      try {
-        // Insert image markdown at cursor position
-        const imageMarkdown = `![Image](${imagePath})`
-        // This would need to be integrated with the Crepe editor's API
-        console.log('📸 Inserting image:', imageMarkdown)
-        // For now, we'll add it to the content
-        // In a real implementation, you'd use the Crepe editor's insert method
-      } catch (error) {
-        console.error('❌ Failed to insert image:', error)
-      }
+    insertImageIntoEditor(imagePath)
+    setShowImagePicker(false)
+  }, [insertImageIntoEditor])
+
+  // Enhanced image upload that also inserts
+  const handleImageUploadAndInsert = useCallback(async (file: File): Promise<string> => {
+    try {
+      const imagePath = await handleImageUpload(file)
+      insertImageIntoEditor(imagePath)
+      return imagePath
+    } catch (error) {
+      console.error('❌ Image upload and insert failed:', error)
+      throw error
     }
-  }, [])
+  }, [handleImageUpload, insertImageIntoEditor])
 
   // ✅ Unified content extraction method
   const getEditorContent = useCallback((): string => {
@@ -207,33 +330,7 @@ export function UnifiedCrepeEditor({
     }
   }, [collaborative])
 
-  // ✅ Unified save function
-  const saveContent = useCallback(async (content: string, context: string = 'auto') => {
-    if (isSavingRef.current || !onChangeRef.current) return false
-    
-    if (content === lastContentRef.current && context !== 'force') {
-      return false
-    }
 
-    try {
-      isSavingRef.current = true
-      console.log(`💾 SAVING [${collaborative ? 'collaborative' : 'solo'}] [${context}]:`, content.length, 'chars')
-      
-      await onChangeRef.current(content)
-      
-      lastContentRef.current = content
-      setSaveCount(prev => prev + 1)
-      setLastSaveTime(new Date())
-      
-      console.log(`✅ SAVE SUCCESS [${context}]`)
-      return true
-    } catch (error) {
-      console.error(`❌ SAVE FAILED [${context}]:`, error)
-      return false
-    } finally {
-      isSavingRef.current = false
-    }
-  }, [collaborative])
 
   // ✅ Smart content application (collaborative mode only)
   const applyInitialContentSafely = useCallback(async (collabService: any) => {
@@ -380,6 +477,38 @@ export function UnifiedCrepeEditor({
     })
   }, [collaborative, wsUrl, documentId, applyInitialContentSafely, setupContentMonitoring])
 
+  // Custom slash command handler for images
+  const setupImageSlashCommand = useCallback((builder: CrepeBuilder) => {
+    // Hook into the editor to intercept slash commands
+    builder.editor.action((ctx) => {
+      try {
+        const view = ctx.get('editorViewCtx')
+        
+        if (view) {
+          // Listen for input events to detect "/image" command
+          const originalHandleKeyDown = view.dom.onkeydown
+          
+          view.dom.addEventListener('input', (event) => {
+            const target = event.target as HTMLElement
+            if (target && target.textContent) {
+              const text = target.textContent
+              const cursorPos = window.getSelection()?.anchorOffset || 0
+              const beforeCursor = text.slice(Math.max(0, cursorPos - 10), cursorPos)
+              
+              // Check if user typed "/image" and show picker
+              if (beforeCursor.includes('/image') && !showImagePicker) {
+                console.log('📸 Image slash command detected')
+                setTimeout(() => setShowImagePicker(true), 100)
+              }
+            }
+          })
+        }
+      } catch (error) {
+        console.warn('Could not set up slash command handler:', error)
+      }
+    })
+  }, [showImagePicker])
+
   // ✅ Main editor initialization
   const initializeEditor = useCallback(async () => {
     if (!containerRef.current || builderRef.current || isInitializedRef.current) {
@@ -418,7 +547,7 @@ export function UnifiedCrepeEditor({
       
       // Enhanced image block with asset management
       builder.addFeature(imageBlock, {
-        onUpload: handleImageUpload,
+        onUpload: handleImageUploadAndInsert,
         placeholder: 'Click to upload image or drop image here...'
       })
       
@@ -435,6 +564,9 @@ export function UnifiedCrepeEditor({
       console.log('✅ Creating editor instance...')
       await builder.create()
       builderRef.current = builder
+
+      // Setup slash command handling
+      setupImageSlashCommand(builder)
 
       if (collaborative) {
         // Collaborative mode: setup Y.js
@@ -458,7 +590,7 @@ export function UnifiedCrepeEditor({
       setIsLoading(false)
       isInitializedRef.current = false
     }
-  }, [collaborative, documentId, initialContent, initializeCollaboration, setupContentMonitoring, handleImageUpload])
+  }, [collaborative, documentId, initialContent, initializeCollaboration, setupContentMonitoring, handleImageUploadAndInsert, setupImageSlashCommand])
 
   // Initialize editor on mount
   useEffect(() => {
@@ -568,7 +700,19 @@ export function UnifiedCrepeEditor({
             {collaborative ? 'Collaborative' : 'Solo'} Mode
           </span>
           {/* Image Picker Button */}
-          <ImagePicker onImageSelect={handleImageSelect} activeDir={activeDirectory} />
+          <ImagePicker 
+            onImageSelect={handleImageSelect} 
+            activeDir={activeDirectory}
+            trigger={
+              <button
+                onClick={() => setShowImagePicker(true)}
+                className="px-2 py-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                title="Insert image"
+              >
+                📸 Insert
+              </button>
+            }
+          />
         </div>
       </div>
 
@@ -581,6 +725,15 @@ export function UnifiedCrepeEditor({
           width: '100%'
         }}
       />
+
+      {/* Image Picker Dialog for Slash Commands */}
+      {showImagePicker && (
+        <ImagePicker
+          onImageSelect={handleImageSelect}
+          activeDir={activeDirectory}
+          trigger={null}
+        />
+      )}
       
       {!isReady && (
         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-background/80 backdrop-blur-sm transition-colors">

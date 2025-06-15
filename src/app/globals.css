@@ -221,6 +221,167 @@
   @apply bg-background border-border text-foreground;
 }
 
+/* Enhanced Crepe Dark Mode Styles */
+
+/* Crepe Editor Root Container Dark Mode */
+.dark .crepe-editor-container {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Crepe Editor Content Dark Mode */
+.dark .crepe-editor-container .milkdown,
+.dark .crepe-editor-container .milkdown-theme-nord {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Crepe Editor Content Area */
+.dark .crepe-editor-container .editor,
+.dark .crepe-editor-container .milkdown .editor {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Crepe Toolbar Dark Mode */
+.dark .crepe-editor-container .crepe-toolbar,
+.dark .crepe-editor-container [data-crepe-toolbar] {
+  background-color: hsl(var(--muted)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Crepe Toolbar Buttons */
+.dark .crepe-editor-container .crepe-toolbar button,
+.dark .crepe-editor-container [data-crepe-toolbar] button {
+  background-color: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .crepe-editor-container .crepe-toolbar button:hover,
+.dark .crepe-editor-container [data-crepe-toolbar] button:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Code Block Dark Mode */
+.dark .crepe-editor-container .crepe-code-block,
+.dark .crepe-editor-container [data-crepe-code-block],
+.dark .crepe-editor-container .cm-editor {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* CodeMirror Dark Mode */
+.dark .crepe-editor-container .cm-editor {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.dark .crepe-editor-container .cm-content {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .crepe-editor-container .cm-focused {
+  outline: 2px solid hsl(var(--ring)) !important;
+}
+
+.dark .crepe-editor-container .cm-gutter {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .crepe-editor-container .cm-lineNumbers .cm-gutterElement {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Image Block Dark Mode */
+.dark .crepe-editor-container .crepe-image-block,
+.dark .crepe-editor-container [data-crepe-image-block] {
+  background-color: hsl(var(--muted)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .crepe-editor-container .crepe-image-placeholder {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Table Dark Mode */
+.dark .crepe-editor-container .crepe-table,
+.dark .crepe-editor-container [data-crepe-table] {
+  background-color: hsl(var(--background)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .crepe-editor-container .crepe-table th {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .crepe-editor-container .crepe-table td {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Block Edit Controls Dark Mode */
+.dark .crepe-editor-container .crepe-block-edit,
+.dark .crepe-editor-container [data-crepe-block-edit] {
+  background-color: hsl(var(--popover)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+}
+
+/* Slash Menu Dark Mode */
+.dark .crepe-editor-container .crepe-slash-menu,
+.dark .crepe-editor-container [data-crepe-slash-menu] {
+  background-color: hsl(var(--popover)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.dark .crepe-editor-container .crepe-slash-menu-item {
+  color: hsl(var(--popover-foreground)) !important;
+}
+
+.dark .crepe-editor-container .crepe-slash-menu-item:hover,
+.dark .crepe-editor-container .crepe-slash-menu-item[data-selected] {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Link Tooltip Dark Mode */
+.dark .crepe-editor-container .crepe-link-tooltip,
+.dark .crepe-editor-container [data-crepe-link-tooltip] {
+  background-color: hsl(var(--popover)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+}
+
+/* Placeholder Dark Mode */
+.dark .crepe-editor-container .crepe-placeholder {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Selection Dark Mode */
+.dark .crepe-editor-container ::selection {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Cursor Dark Mode */
+.dark .crepe-editor-container .crepe-cursor {
+  border-color: hsl(var(--foreground)) !important;
+}
+
 /* Scrollbar theming */
 ::-webkit-scrollbar {
   width: 8px;
@@ -238,6 +399,51 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--foreground));
+}
+
+/* Dark mode scrollbar */
+.dark .crepe-editor-container ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark .crepe-editor-container ::-webkit-scrollbar-track {
+  background: hsl(var(--muted)) !important;
+}
+
+.dark .crepe-editor-container ::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground)) !important;
+  border-radius: 4px;
+}
+
+.dark .crepe-editor-container ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground)) !important;
+}
+
+/* Ensure all Crepe components respect theme */
+.dark .crepe-editor-container [class*="crepe-"],
+.dark .crepe-editor-container [data-crepe] {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .crepe-editor-container [class*="crepe-"] input,
+.dark .crepe-editor-container [data-crepe] input {
+  background-color: hsl(var(--background)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .crepe-editor-container [class*="crepe-"] button,
+.dark .crepe-editor-container [data-crepe] button {
+  background-color: hsl(var(--background)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .crepe-editor-container [class*="crepe-"] button:hover,
+.dark .crepe-editor-container [data-crepe] button:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
 }
 
 /* Ensure tooltips and dropdowns respect theme */
@@ -284,4 +490,415 @@
 
 .modal-content {
   @apply bg-background text-foreground border-border;
+}
+
+/* COMPREHENSIVE CREPE DARK MODE FIX */
+/* Add this to your src/app/globals.css */
+
+/* Override Crepe CSS Custom Properties in Dark Mode */
+.dark .milkdown {
+  /* Override all Crepe color variables */
+  --crepe-color-background: hsl(var(--background)) !important;
+  --crepe-color-on-background: hsl(var(--foreground)) !important;
+  --crepe-color-surface: hsl(var(--muted)) !important;
+  --crepe-color-surface-low: hsl(var(--muted)) !important;
+  --crepe-color-on-surface: hsl(var(--foreground)) !important;
+  --crepe-color-on-surface-variant: hsl(var(--muted-foreground)) !important;
+  --crepe-color-outline: hsl(var(--border)) !important;
+  --crepe-color-primary: hsl(var(--primary)) !important;
+  --crepe-color-secondary: hsl(var(--secondary)) !important;
+  --crepe-color-on-secondary: hsl(var(--secondary-foreground)) !important;
+  --crepe-color-inverse: hsl(var(--foreground)) !important;
+  --crepe-color-on-inverse: hsl(var(--background)) !important;
+  --crepe-color-inline-code: hsl(var(--primary)) !important;
+  --crepe-color-error: hsl(var(--destructive)) !important;
+  --crepe-color-hover: hsl(var(--accent)) !important;
+  --crepe-color-selected: hsl(var(--accent)) !important;
+  --crepe-color-inline-area: hsl(var(--muted)) !important;
+
+  /* Ensure proper shadows for dark mode */
+  --crepe-shadow-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.3), 0px 1px 2px 0px rgba(0, 0, 0, 0.5) !important;
+  --crepe-shadow-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.3), 0px 1px 2px 0px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Force all Crepe components to respect theme */
+.dark .milkdown * {
+  color: inherit !important;
+}
+
+/* Code Block Dark Mode - Most Important */
+.dark .milkdown .milkdown-code-block {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .cm-editor {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .cm-content {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .cm-gutter {
+  background: hsl(var(--muted)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .tools {
+  background: hsl(var(--muted)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .language-button {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .preview-toggle-button {
+  background: hsl(var(--secondary)) !important;
+  color: hsl(var(--secondary-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .list-wrapper {
+  background: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .language-list-item {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .language-list-item:hover {
+  background: hsl(var(--accent)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .search-box {
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-code-block .search-box input {
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Image Block Dark Mode */
+.dark .milkdown .milkdown-image-block {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .milkdown .milkdown-image-block.selected {
+  background: hsl(var(--accent)) !important;
+  outline: 2px solid hsl(var(--primary)) !important;
+}
+
+.dark .milkdown .milkdown-image-block .image-edit {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-image-block .image-edit input {
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .milkdown .milkdown-image-block .image-edit .confirm {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/* Image Inline Dark Mode */
+.dark .milkdown .milkdown-image-inline .empty-image-inline {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-image-inline input {
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Block Edit Menu Dark Mode - CRITICAL */
+.dark .milkdown .milkdown-slash-menu {
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .tab-group {
+  background: hsl(var(--popover)) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .tab-group ul li {
+  color: hsl(var(--popover-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .tab-group ul li:hover {
+  background: hsl(var(--accent)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .tab-group ul li.selected {
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .menu-groups {
+  background: hsl(var(--popover)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .menu-group h6 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .menu-group li {
+  color: hsl(var(--popover-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .menu-group li:hover,
+.dark .milkdown .milkdown-slash-menu .menu-group li.hover {
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .menu-group li.active {
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-slash-menu .menu-group li svg {
+  color: hsl(var(--muted-foreground)) !important;
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+/* Block Handle Dark Mode */
+.dark .milkdown .milkdown-block-handle {
+  background: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 8px !important;
+}
+
+.dark .milkdown .milkdown-block-handle .operation-item {
+  background: transparent !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-block-handle .operation-item:hover {
+  background: hsl(var(--accent)) !important;
+}
+
+.dark .milkdown .milkdown-block-handle .operation-item svg {
+  color: hsl(var(--muted-foreground)) !important;
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+/* Toolbar Dark Mode */
+.dark .milkdown .milkdown-toolbar {
+  background: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-toolbar .toolbar-item {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-toolbar .toolbar-item:hover {
+  background: hsl(var(--accent)) !important;
+}
+
+.dark .milkdown .milkdown-toolbar .toolbar-item.active {
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--primary)) !important;
+}
+
+.dark .milkdown .milkdown-toolbar .toolbar-item svg {
+  color: inherit !important;
+  fill: currentColor !important;
+}
+
+.dark .milkdown .milkdown-toolbar .divider {
+  background: hsl(var(--border)) !important;
+}
+
+/* Link Tooltip Dark Mode */
+.dark .milkdown .milkdown-link-preview .link-preview {
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-link-edit .link-edit {
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-link-edit .link-edit input {
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Table Dark Mode */
+.dark .milkdown .milkdown-table-block {
+  background: hsl(var(--background)) !important;
+}
+
+.dark .milkdown .milkdown-table-block th,
+.dark .milkdown .milkdown-table-block td {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .milkdown .milkdown-table-block th {
+  background: hsl(var(--muted)) !important;
+}
+
+.dark .milkdown .milkdown-table-block .selectedCell::after {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.dark .milkdown .milkdown-table-block .handle {
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/* List Item Dark Mode */
+.dark .milkdown .milkdown-list-item-block .label-wrapper {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .milkdown .milkdown-list-item-block svg {
+  color: hsl(var(--muted-foreground)) !important;
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+/* LaTeX Dark Mode */
+.dark .milkdown .milkdown-latex-inline-edit {
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .milkdown span[data-type='math_inline'] {
+  color: hsl(var(--primary)) !important;
+  background: hsl(var(--muted)) !important;
+}
+
+/* Placeholder Dark Mode */
+.dark .milkdown .crepe-placeholder::before {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Selection and Focus States */
+.dark .milkdown .ProseMirror *::selection {
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.dark .milkdown .ProseMirror .ProseMirror-selectednode {
+  background: hsl(var(--accent)) !important;
+  outline: 2px solid hsl(var(--primary)) !important;
+}
+
+/* Drop Cursor */
+.dark .milkdown .crepe-drop-cursor {
+  background-color: hsl(var(--primary)) !important;
+}
+
+/* Scrollbars */
+.dark .milkdown ::-webkit-scrollbar-track {
+  background: hsl(var(--muted)) !important;
+}
+
+.dark .milkdown ::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .milkdown ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground)) !important;
+}
+
+/* Force inheritance for nested elements */
+.dark .milkdown [class*="milkdown-"] * {
+  color: inherit;
+}
+
+.dark .milkdown [class*="milkdown-"] input {
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .milkdown [class*="milkdown-"] button {
+  color: inherit !important;
+}
+
+/* Ensure panels and dropdowns are visible */
+.dark .milkdown [class*="panel"],
+.dark .milkdown [class*="dropdown"],
+.dark .milkdown [class*="menu"],
+.dark .milkdown [class*="tooltip"] {
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/* CodeMirror specific fixes for dark mode */
+.dark .milkdown .cm-editor.cm-focused {
+  outline: 2px solid hsl(var(--primary)) !important;
+}
+
+.dark .milkdown .cm-editor .cm-line {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .milkdown .cm-editor .cm-gutterElement {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Ensure any remaining white backgrounds are fixed */
+.dark .milkdown [style*="background: white"],
+.dark .milkdown [style*="background-color: white"],
+.dark .milkdown [style*="background: #fff"],
+.dark .milkdown [style*="background-color: #fff"] {
+  background: hsl(var(--background)) !important;
+}
+
+.dark .milkdown [style*="color: black"],
+.dark .milkdown [style*="color: #000"] {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* High specificity overrides for stubborn elements */
+.dark .milkdown .milkdown-code-block,
+.dark .milkdown .milkdown-code-block *:not(svg) {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .milkdown .milkdown-image-block.selected,
+.dark .milkdown .milkdown-image-block.selected * {
+  background-color: hsl(var(--accent)) !important;
+}
+
+/* Final fallback - nuclear option for any remaining issues */
+.dark .milkdown [class*="milkdown-"]:not([class*="icon"]):not(svg) {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .milkdown [class*="milkdown-"] [class*="surface"],
+.dark .milkdown [class*="milkdown-"] [class*="panel"],
+.dark .milkdown [class*="milkdown-"] [class*="menu"] {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
 }
