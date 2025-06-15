@@ -122,11 +122,14 @@ export function EditorArea() {
 
       {/* Editor */}
       <div className="flex-1 overflow-hidden">
-        <CrepeEditor
-          key={selectedFile} // Force re-mount when file changes
-          value={currentContent}
-          onChange={setContent}
-        />
+        {selectedFile ? (
+          <div key={selectedFile} className="h-full">
+            <CrepeEditor
+              value={currentContent}
+              onChange={setContent}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   )
