@@ -13,67 +13,96 @@ interface CrepeEditorProps {
 export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const crepeInstance = useRef<Crepe | null>(null);
-  const isInitialized = useRef(false);
+  const observerRef = useRef<MutationObserver | null>(null);
+  const isMounted = useRef(false);
 
-  // Initialize editor
+  // Handle editor initialization and updates
   useEffect(() => {
-    if (!editorRef.current || isInitialized.current) return;
+    if (!editorRef.current) return;
 
-    // Clean up any existing instance
+    // Cleanup previous instance if it exists
     if (crepeInstance.current) {
       crepeInstance.current.destroy();
       crepeInstance.current = null;
     }
 
-    const crepe = new Crepe({
-      root: editorRef.current,
-      defaultValue: value,
-    });
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
 
-    crepe.create();
-    crepeInstance.current = crepe;
-    isInitialized.current = true;
+    // Only initialize once
+    if (!isMounted.current) {
+      isMounted.current = true;
+      
+      const initializeEditor = async () => {
+        const crepe = new Crepe({
+          root: editorRef.current,
+          defaultValue: value,
+        });
 
-    // Set up change listener using MutationObserver
-    const observer = new MutationObserver(() => {
-      if (onChange && crepeInstance.current) {
-        const markdown = crepeInstance.current.getMarkdown();
-        onChange(markdown);
+        await crepe.create();
+        crepeInstance.current = crepe;
+
+        // Set up change listener
+        const observer = new MutationObserver(() => {
+          if (onChange && crepeInstance.current) {
+            try {
+              const markdown = crepeInstance.current.getMarkdown();
+              onChange(markdown);
+            } catch (error) {
+              console.error('Error getting markdown:', error);
+            }
+          }
+        });
+
+        observerRef.current = observer;
+        observer.observe(editorRef.current, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+      };
+
+      initializeEditor();
+    }
+
+    // Handle value updates
+    const updateContent = async () => {
+      if (crepeInstance.current) {
+        try {
+          const currentContent = crepeInstance.current.getMarkdown();
+          if (currentContent !== value) {
+            // Destroy and recreate the editor with new content
+            crepeInstance.current.destroy();
+            const crepe = new Crepe({
+              root: editorRef.current,
+              defaultValue: value,
+            });
+            await crepe.create();
+            crepeInstance.current = crepe;
+          }
+        } catch (error) {
+          console.error('Error updating content:', error);
+        }
       }
-    });
+    };
 
-    observer.observe(editorRef.current, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
+    updateContent();
 
+    // Cleanup on unmount
     return () => {
-      observer.disconnect();
+      isMounted.current = false;
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
       if (crepeInstance.current) {
         crepeInstance.current.destroy();
         crepeInstance.current = null;
-        isInitialized.current = false;
       }
     };
-  }, []); // Only run on mount/unmount
-
-  // Handle content updates from props
-  useEffect(() => {
-    if (crepeInstance.current && value !== undefined) {
-      const currentContent = crepeInstance.current.getMarkdown();
-      if (currentContent !== value) {
-        // Destroy and recreate the editor with new content
-        crepeInstance.current.destroy();
-        const crepe = new Crepe({
-          root: editorRef.current!,
-          defaultValue: value,
-        });
-        crepe.create();
-        crepeInstance.current = crepe;
-      }
-    }
-  }, [value]);
+  }, [value, onChange]);
 
   return <div ref={editorRef} style={{ minHeight: 400 }} />;
 } 
