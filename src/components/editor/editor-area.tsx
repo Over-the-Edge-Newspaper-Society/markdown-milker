@@ -3,20 +3,10 @@
 
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { useFileStore } from '@/lib/stores/file-store'
-import { SimpleEditor } from './SimpleEditor'
-
-// Import the working collaborative Crepe editor
-let WorkingCollaborativeCrepe: any = null
-try {
-  WorkingCollaborativeCrepe = require('./WorkingCollaborativeCrepe').WorkingCollaborativeCrepe
-} catch (e) {
-  console.log('WorkingCollaborativeCrepe not available')
-}
-
+import { UnifiedCrepeEditor } from './UnifiedCrepeEditor'
 import { SaveStatus } from './save-status'
 import { useEffect, useCallback, useState, useMemo, useRef } from 'react'
 import { X, FileText, Users, ChevronDown, Save } from 'lucide-react'
-import debounce from 'lodash/debounce'
 
 type EditorMode = 'collaborative' | 'solo'
 
@@ -34,7 +24,7 @@ export function EditorArea() {
   const [editorMode, setEditorMode] = useState<EditorMode>('collaborative')
   const [isFileLoaded, setIsFileLoaded] = useState(false)
   const [showModeDropdown, setShowModeDropdown] = useState(false)
-  const [collaborativeSaves, setCollaborativeSaves] = useState(0)
+  const [totalSaves, setTotalSaves] = useState(0)
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
   const [isManualSaving, setIsManualSaving] = useState(false)
 
@@ -42,37 +32,36 @@ export function EditorArea() {
   const isSavingRef = useRef(false)
   const lastSavedContentRef = useRef('')
 
-  // Memoize documentId at the top level
+  // Memoize documentId
   const documentId = useMemo(() => selectedFile?.replace(/[^a-zA-Z0-9]/g, '_') || '', [selectedFile])
 
   const editorModes = [
-    ...(WorkingCollaborativeCrepe ? [{ 
+    { 
       value: 'collaborative' as EditorMode, 
-      label: 'Collaborative + File Persistence', 
-      description: 'Real-time collaboration with automatic file saving',
-      icon: '🔄'
-    }] : []),
+      label: 'Collaborative Mode', 
+      description: 'Real-time collaboration with immediate file saving (1s)',
+      icon: '🤝'
+    },
     { 
       value: 'solo' as EditorMode, 
       label: 'Solo Mode', 
-      description: 'Single-user Crepe editor',
+      description: 'Single-user editing with debounced saving (1.5s)',
       icon: '✨'
     }
   ]
 
   const currentMode = editorModes.find(mode => mode.value === editorMode) || editorModes[0]
 
-  // ✅ SOLUTION 1: Immediate save function for collaborative mode (no debouncing)
-  const saveToFileImmediate = useCallback(async (content: string, context: string = 'unknown') => {
+  // ✅ Unified save function for both modes
+  const saveToFile = useCallback(async (content: string, context: string = 'auto') => {
     // Prevent concurrent saves
     if (isSavingRef.current) {
-      console.log('🔒 Save already in progress, queueing...')
+      console.log('🔒 Save already in progress, skipping...')
       return false
     }
 
-    // Don't save if content hasn't actually changed
-    if (content === lastSavedContentRef.current) {
-      console.log('📋 Content unchanged, skipping save')
+    // Don't save if content hasn't changed (unless forced)
+    if (content === lastSavedContentRef.current && context !== 'force') {
       return true
     }
 
@@ -85,11 +74,10 @@ export function EditorArea() {
       isSavingRef.current = true
       setSaveStatus('saving')
       
-      console.log(`💾 IMMEDIATE SAVE [${context}]:`, {
+      console.log(`💾 SAVING [${editorMode}] [${context}]:`, {
         file: selectedFile,
         contentLength: content.length,
-        previousLength: lastSavedContentRef.current.length,
-        mode: editorMode
+        previousLength: lastSavedContentRef.current.length
       })
 
       // Update the editor store content
@@ -103,12 +91,9 @@ export function EditorArea() {
       lastSavedContentRef.current = content
       setSaveStatus('saved')
       setLastSaveTime(new Date())
-      
-      if (editorMode === 'collaborative') {
-        setCollaborativeSaves(prev => prev + 1)
-      }
+      setTotalSaves(prev => prev + 1)
 
-      console.log(`✅ SAVE SUCCESSFUL [${context}]:`, content.length, 'chars saved')
+      console.log(`✅ SAVE SUCCESS [${context}]:`, content.length, 'chars saved')
       return true
       
     } catch (error) {
@@ -120,30 +105,20 @@ export function EditorArea() {
     }
   }, [selectedFile, isFileLoaded, editorMode, setContent, saveFile, setSaveStatus])
 
-  // ✅ SOLUTION 2: Debounced save for solo mode only
-  const debouncedSoloSave = useCallback(
-    debounce(async (content: string) => {
-      if (editorMode === 'solo') {
-        await saveToFileImmediate(content, 'solo-debounced')
-      }
-    }, 2000),
-    [editorMode, saveToFileImmediate]
-  )
-
-  // ✅ SOLUTION 3: Manual save function
+  // ✅ Manual save function
   const manualSave = useCallback(async () => {
     if (!selectedFile || isManualSaving) return
     
     setIsManualSaving(true)
     try {
-      const success = await saveToFileImmediate(fileContent, 'manual')
+      const success = await saveToFile(fileContent, 'manual')
       if (success) {
         console.log('✅ Manual save completed')
       }
     } finally {
       setIsManualSaving(false)
     }
-  }, [selectedFile, fileContent, saveToFileImmediate, isManualSaving])
+  }, [selectedFile, fileContent, saveToFile, isManualSaving])
 
   // Load file content when selected
   useEffect(() => {
@@ -152,7 +127,7 @@ export function EditorArea() {
       setCurrentFilePath(selectedFile)
       setSaveStatus('saving')
       setIsFileLoaded(false)
-      setCollaborativeSaves(0)
+      setTotalSaves(0)
       setLastSaveTime(null)
       lastSavedContentRef.current = ''
       
@@ -199,50 +174,47 @@ export function EditorArea() {
       lastSavedContentRef.current = ''
       setSaveStatus('saved')
       setIsFileLoaded(false)
-      setCollaborativeSaves(0)
+      setTotalSaves(0)
       setLastSaveTime(null)
     }
   }, [selectedFile, setContent, setCurrentFilePath, setSaveStatus, editorMode])
 
-  // ✅ SOLUTION 4: Handle editor content changes with different strategies per mode
+  // ✅ Handle editor content changes
   const handleEditorChange = useCallback(async (content: string) => {
-    console.log('✏️ Editor content changed:', {
+    console.log('✏️ Unified editor content changed:', {
       contentLength: content.length,
       mode: editorMode,
       previousLength: lastSavedContentRef.current.length,
-      hasChanged: content !== lastSavedContentRef.current
+      hasChanged: content !== lastSavedContentRef.current,
+      isFileLoaded,
+      selectedFile
     })
     
-    if (!isFileLoaded) {
-      console.log('⚠️ File not loaded yet, ignoring change')
+    if (!isFileLoaded || !selectedFile) {
+      console.log('⚠️ File not ready, ignoring change')
       return
     }
     
     // Update local state immediately
     setFileContent(content)
-    setSaveStatus('unsaved')
     
-    // Different saving strategies based on editor mode
-    if (editorMode === 'collaborative') {
-      // Collaborative mode: immediate save for every change
-      console.log('🤝 Collaborative mode: immediate save')
-      await saveToFileImmediate(content, 'collaborative-auto')
-    } else {
-      // Solo mode: debounced save
-      console.log('✨ Solo mode: debounced save')
-      debouncedSoloSave(content)
+    // Only process if content actually changed
+    if (content !== lastSavedContentRef.current) {
+      setSaveStatus('unsaved')
+      
+      // The unified editor handles its own saving timing based on mode
+      // We just need to provide the save function
+      await saveToFile(content, `${editorMode}-auto`)
     }
-  }, [editorMode, isFileLoaded, setSaveStatus, saveToFileImmediate, debouncedSoloSave])
+  }, [editorMode, isFileLoaded, selectedFile, setSaveStatus, saveToFile])
 
   const handleClose = async () => {
     if (selectedFile && fileContent && fileContent !== lastSavedContentRef.current) {
       console.log('💾 Saving before close...')
-      await saveToFileImmediate(fileContent, 'before-close')
+      await saveToFile(fileContent, 'before-close')
     }
     closeFile()
   }
-
-  const isCollaborative = editorMode === 'collaborative' && WorkingCollaborativeCrepe
 
   if (!selectedFile) {
     return (
@@ -255,7 +227,7 @@ export function EditorArea() {
               Select a markdown file from the sidebar to start editing
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              🔄 Collaborative editor with file persistence ready
+              ✨ Unified Crepe editor with collaborative & solo modes
             </p>
           </div>
         </div>
@@ -271,60 +243,16 @@ export function EditorArea() {
           <div className="font-medium">Loading file...</div>
           <div className="text-sm text-muted-foreground">{selectedFile}</div>
           <div className="text-xs text-blue-600 mt-2">
-            {editorMode === 'collaborative' ? 'Collaborative with file persistence' : 'Single-user mode'}
+            Preparing for {editorMode} mode
           </div>
         </div>
       </div>
     )
   }
 
-  const renderEditor = () => {
-    const editorKey = `${editorMode}-${selectedFile}-${isFileLoaded}`
-    const commonProps = {
-      documentId,
-      initialContent: fileContent,
-      onChange: handleEditorChange,
-      wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'
-    }
-
-    switch (editorMode) {
-      case 'collaborative':
-        if (WorkingCollaborativeCrepe) {
-          return <WorkingCollaborativeCrepe key={editorKey} {...commonProps} />
-        } else {
-          console.warn('WorkingCollaborativeCrepe not available, falling back to solo mode')
-          return (
-            <SimpleEditor
-              key={`simple-${selectedFile}`}
-              initialContent={fileContent}
-              onChange={handleEditorChange}
-            />
-          )
-        }
-
-      case 'solo':
-        return (
-          <SimpleEditor
-            key={`simple-${selectedFile}`}
-            initialContent={fileContent}
-            onChange={handleEditorChange}
-          />
-        )
-      
-      default:
-        return (
-          <SimpleEditor
-            key={`simple-${selectedFile}`}
-            initialContent={fileContent}
-            onChange={handleEditorChange}
-          />
-        )
-    }
-  }
-
   return (
     <div className="h-full flex flex-col">
-      {/* Enhanced file header with save information */}
+      {/* Enhanced file header */}
       <div className="border-b px-4 py-2 flex items-center justify-between bg-muted/30">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
@@ -333,26 +261,28 @@ export function EditorArea() {
             • {fileContent?.length || 0} chars
           </span>
           
-          {isCollaborative && (
-            <div className="flex items-center gap-1 text-xs">
-              <Users className="h-3 w-3 text-blue-600" />
-              <span className="text-blue-600">Collaborative</span>
-              {collaborativeSaves > 0 && (
-                <span className="bg-green-100 text-green-700 px-1 rounded text-xs">
-                  {collaborativeSaves} saves
-                </span>
-              )}
-              {lastSaveTime && (
-                <span className="text-green-600 text-xs">
-                  • {lastSaveTime.toLocaleTimeString()}
-                </span>
-              )}
-            </div>
-          )}
-          
-          {editorMode === 'solo' && (
-            <span className="text-gray-600 text-xs">• Solo mode</span>
-          )}
+          <div className="flex items-center gap-1 text-xs">
+            {editorMode === 'collaborative' ? (
+              <>
+                <Users className="h-3 w-3 text-blue-600" />
+                <span className="text-blue-600">Collaborative</span>
+              </>
+            ) : (
+              <span className="text-gray-600">Solo</span>
+            )}
+            
+            {totalSaves > 0 && (
+              <span className="bg-green-100 text-green-700 px-1 rounded text-xs ml-1">
+                {totalSaves} saves
+              </span>
+            )}
+            
+            {lastSaveTime && (
+              <span className="text-green-600 text-xs ml-1">
+                • {lastSaveTime.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </div>
         
         <div className="flex items-center gap-3">
@@ -397,16 +327,14 @@ export function EditorArea() {
                       <span className="font-medium">{mode.label}</span>
                       {editorMode === mode.value && <span className="text-blue-500">✓</span>}
                     </div>
-                    <div className="text-gray-600 text-xs">
+                    <div className="text-gray-600 text-xs mb-1">
                       {mode.description}
                     </div>
-                    {mode.value === 'collaborative' && (
-                      <div className="text-green-600 text-xs mt-1">
-                        ✅ Saves to file immediately on every change<br/>
-                        ✅ Preserves work through server restarts<br/>
-                        ✅ Real-time collaboration + file persistence
-                      </div>
-                    )}
+                    <div className={`text-xs mt-1 ${mode.value === 'collaborative' ? 'text-green-600' : 'text-blue-600'}`}>
+                      ✅ Same Crepe editor • {mode.value === 'collaborative' ? 'Y.js collaboration' : 'No Y.js conflicts'}<br/>
+                      ✅ Unified styling • Consistent features<br/>
+                      ✅ Auto-save • File persistence
+                    </div>
                   </button>
                 ))}
               </div>
@@ -424,9 +352,16 @@ export function EditorArea() {
         </div>
       </div>
 
-      {/* Editor */}
+      {/* Unified Crepe Editor */}
       <div className="flex-1 overflow-hidden">
-        {renderEditor()}
+        <UnifiedCrepeEditor
+          key={`unified-${editorMode}-${selectedFile}-${isFileLoaded}`}
+          documentId={documentId}
+          initialContent={fileContent}
+          onChange={handleEditorChange}
+          wsUrl={process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'}
+          collaborative={editorMode === 'collaborative'}
+        />
       </div>
       
       {/* Click outside to close dropdown */}
