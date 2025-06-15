@@ -1,108 +1,120 @@
-'use client';
+'use client'
 
-import { useEffect, useRef } from 'react';
-import { Crepe } from '@milkdown/crepe';
-import '@milkdown/crepe/theme/common/style.css';
-import '@milkdown/crepe/theme/nord.css';
+import { useEffect, useRef, useState } from 'react'
+import { Crepe } from '@milkdown/crepe'
+import '@milkdown/crepe/theme/common/style.css'
+import '@milkdown/crepe/theme/nord.css'
 
 interface CrepeEditorProps {
-  value?: string;
-  onChange?: (markdown: string) => void;
+  value?: string
+  onChange?: (markdown: string) => void
 }
 
 export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const crepeInstance = useRef<Crepe | null>(null);
-  const observerRef = useRef<MutationObserver | null>(null);
-  const isMounted = useRef(false);
+  const editorRef = useRef<HTMLDivElement>(null)
+  const crepeInstance = useRef<Crepe | null>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
 
-  // Handle editor initialization and updates
   useEffect(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || isInitialized) return
 
-    // Cleanup previous instance if it exists
-    if (crepeInstance.current) {
-      crepeInstance.current.destroy();
-      crepeInstance.current = null;
-    }
-
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
-
-    // Only initialize once
-    if (!isMounted.current) {
-      isMounted.current = true;
-      
-      const initializeEditor = async () => {
+    const initializeEditor = async () => {
+      try {
         const crepe = new Crepe({
-          root: editorRef.current,
+          root: editorRef.current!,
           defaultValue: value,
-        });
+          featureConfigs: {
+            // Configure features you want
+            toolbar: true,
+            preview: false, // Disable preview to avoid conflicts
+          }
+        })
 
-        await crepe.create();
-        crepeInstance.current = crepe;
+        await crepe.create()
+        crepeInstance.current = crepe
 
         // Set up change listener
-        const observer = new MutationObserver(() => {
-          if (onChange && crepeInstance.current) {
-            try {
-              const markdown = crepeInstance.current.getMarkdown();
-              onChange(markdown);
-            } catch (error) {
-              console.error('Error getting markdown:', error);
+        if (onChange) {
+          // Listen for changes using Milkdown's API
+          const handleChange = () => {
+            if (crepeInstance.current) {
+              try {
+                const markdown = crepeInstance.current.getMarkdown()
+                onChange(markdown)
+              } catch (error) {
+                console.error('Error getting markdown:', error)
+              }
             }
           }
-        });
 
-        observerRef.current = observer;
-        observer.observe(editorRef.current, {
-          childList: true,
-          subtree: true,
-          characterData: true,
-        });
-      };
+          // Use a simple interval to check for changes
+          // This is a workaround since Crepe's event system can be tricky
+          const changeInterval = setInterval(handleChange, 1000)
+          
+          // Cleanup function
+          return () => {
+            clearInterval(changeInterval)
+            if (crepeInstance.current) {
+              crepeInstance.current.destroy()
+              crepeInstance.current = null
+            }
+          }
+        }
 
-      initializeEditor();
+        setIsInitialized(true)
+      } catch (error) {
+        console.error('Failed to initialize Crepe editor:', error)
+      }
     }
 
-    // Handle value updates
-    const updateContent = async () => {
-      if (crepeInstance.current) {
-        try {
-          const currentContent = crepeInstance.current.getMarkdown();
-          if (currentContent !== value) {
-            // Destroy and recreate the editor with new content
-            crepeInstance.current.destroy();
-            const crepe = new Crepe({
-              root: editorRef.current,
-              defaultValue: value,
-            });
-            await crepe.create();
-            crepeInstance.current = crepe;
-          }
-        } catch (error) {
-          console.error('Error updating content:', error);
-        }
-      }
-    };
+    initializeEditor()
 
-    updateContent();
-
-    // Cleanup on unmount
     return () => {
-      isMounted.current = false;
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-        observerRef.current = null;
-      }
       if (crepeInstance.current) {
-        crepeInstance.current.destroy();
-        crepeInstance.current = null;
+        crepeInstance.current.destroy()
+        crepeInstance.current = null
       }
-    };
-  }, [value, onChange]);
+      setIsInitialized(false)
+    }
+  }, []) // Remove value from dependencies to prevent re-initialization
 
-  return <div ref={editorRef} style={{ minHeight: 400 }} />;
-} 
+  // Handle value updates without re-initializing
+  useEffect(() => {
+    if (isInitialized && crepeInstance.current && value !== undefined) {
+      try {
+        const currentContent = crepeInstance.current.getMarkdown()
+        if (currentContent !== value) {
+          // Only update if the content is actually different
+          // This prevents unnecessary updates and potential conflicts
+          crepeInstance.current.action((ctx) => {
+            // Use Milkdown's action API to update content
+            // This is safer than destroying and recreating
+            const view = ctx.get('view')
+            // Simple approach: just set the value if very different
+            if (Math.abs(currentContent.length - value.length) > 10) {
+              editorRef.current!.innerHTML = ''
+              crepeInstance.current!.destroy()
+              setIsInitialized(false)
+              // This will trigger re-initialization with new value
+            }
+          })
+        }
+      } catch (error) {
+        console.error('Error updating content:', error)
+      }
+    }
+  }, [value, isInitialized])
+
+  return (
+    <div className="h-full">
+      <div 
+        ref={editorRef} 
+        className="h-full min-h-[400px] p-4"
+        style={{ 
+          height: '100%',
+          overflow: 'auto'
+        }}
+      />
+    </div>
+  )
+}
