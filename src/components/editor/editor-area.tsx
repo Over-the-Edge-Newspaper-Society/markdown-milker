@@ -4,8 +4,9 @@
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { useFileStore } from '@/lib/stores/file-store'
 import { CollaborativeEditor } from './CollaborativeEditor'
+import { SimpleEditor } from './SimpleEditor'
 import { SaveStatus } from './save-status'
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, useMemo } from 'react'
 import { X, FileText, Users } from 'lucide-react'
 import debounce from 'lodash/debounce'
 
@@ -21,6 +22,9 @@ export function EditorArea() {
   const { selectedFile, closeFile } = useFileStore()
   const [fileContent, setFileContent] = useState('')
   const [isCollaborative, setIsCollaborative] = useState(true)
+
+  // Memoize documentId at the top level
+  const documentId = useMemo(() => selectedFile?.replace(/[^a-zA-Z0-9]/g, '_') || '', [selectedFile])
 
   // Debug logging
   console.log('📊 EditorArea render:', {
@@ -146,9 +150,6 @@ export function EditorArea() {
     )
   }
 
-  // Generate a document ID for collaboration based on file path
-  const documentId = selectedFile.replace(/[^a-zA-Z0-9]/g, '_')
-
   return (
     <div className="h-full flex flex-col">
       {/* File header with collaboration toggle */}
@@ -201,13 +202,10 @@ export function EditorArea() {
                 wsUrl={process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'}
               />
             ) : (
-              <div className="h-full p-4 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <FileText className="h-8 w-8 mx-auto mb-2" />
-                  <p>Solo mode - collaboration disabled</p>
-                  <p className="text-xs mt-1">Click "Collaborative" to enable real-time editing</p>
-                </div>
-              </div>
+              <SimpleEditor
+                initialContent={fileContent}
+                onChange={handleEditorChange}
+              />
             )}
           </div>
         )}

@@ -2,79 +2,119 @@
 // Proper Y.js WebSocket server using official utilities
 
 const WebSocket = require('ws')
-const Y = require('yjs')
+const http = require('http')
+const { setupWSConnection } = require('y-websocket/bin/utils')
+const { v4: uuidv4 } = require('uuid')
 
-// Import the official y-websocket utilities
-let setupWSConnection
-try {
-  setupWSConnection = require('y-websocket/bin/utils').setupWSConnection
-  console.log('✅ Using official y-websocket utilities')
-} catch (error) {
-  console.error('❌ Failed to import y-websocket utilities:', error.message)
-  console.log('📦 Please install: npm install y-websocket')
-  process.exit(1)
-}
+const port = process.env.PORT || 1234
+const server = http.createServer((request, response) => {
+  response.writeHead(200, { 'Content-Type': 'text/plain' })
+  response.end('okay')
+})
 
-const port = process.env.WS_PORT || 1234
-
-// Create WebSocket server
 const wss = new WebSocket.Server({ 
-  port,
-  perMessageDeflate: {
-    zlibDeflateOptions: {
-      threshold: 1024,
-      concurrencyLimit: 10,
-    },
-    threshold: 1024,
+  server,
+  // Add ping/pong to keep connections alive
+  clientTracking: true,
+  perMessageDeflate: false
+})
+
+// Track active connections
+const connections = new Map()
+
+// Health check endpoint
+server.on('request', (req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({
+      status: 'ok',
+      connections: connections.size,
+      documents: Array.from(connections.keys())
+    }))
   }
 })
 
-console.log('🚀 Starting Y.js WebSocket server with official utilities...')
-
-// Track connections for debugging
-const connections = new Map()
-
 wss.on('connection', (ws, req) => {
-  const url = new URL(req.url, `http://${req.headers.host}`)
-  const docName = url.pathname.slice(1) || 'default'
+  const docName = req.url.slice(1).split('?')[0] // Remove leading slash and query params
+  const connectionId = uuidv4()
   
   console.log(`📞 New Y.js connection to document: "${docName}"`)
   
-  // Store connection info
-  const connectionId = Math.random().toString(36).substring(2, 15)
-  connections.set(connectionId, { ws, docName, connectedAt: new Date() })
-  
-  // Use official setupWSConnection
-  try {
-    setupWSConnection(ws, req, { docName })
-    console.log(`✅ Y.js connection established for "${docName}" (${connectionId})`)
-  } catch (error) {
-    console.error(`❌ Failed to setup Y.js connection for "${docName}":`, error)
-    ws.close(1011, 'Internal server error')
-    connections.delete(connectionId)
-    return
+  // Add connection to tracking
+  if (!connections.has(docName)) {
+    connections.set(docName, new Set())
   }
+  connections.get(docName).add(connectionId)
   
-  // Handle connection close
-  ws.on('close', (code, reason) => {
-    console.log(`📞 Y.js connection closed for "${docName}" (${connectionId}): ${code} ${reason}`)
-    connections.delete(connectionId)
+  // Set up ping/pong
+  ws.isAlive = true
+  ws.on('pong', () => {
+    ws.isAlive = true
   })
   
-  ws.on('error', (error) => {
-    console.error(`❌ Y.js connection error for "${docName}" (${connectionId}):`, error.message)
-    connections.delete(connectionId)
+  // Handle connection setup
+  try {
+    setupWSConnection(ws, req, {
+      docName,
+      gc: true,
+      pingTimeout: 30000
+    })
+    
+    console.log(`✅ Y.js connection established for "${docName}" (${connectionId})`)
+    
+    // Handle connection close
+    ws.on('close', (code, reason) => {
+      console.log(`📞 Y.js connection closed for "${docName}" (${connectionId}): ${code} ${reason || ''}`)
+      const docConnections = connections.get(docName)
+      if (docConnections) {
+        docConnections.delete(connectionId)
+        if (docConnections.size === 0) {
+          connections.delete(docName)
+        }
+      }
+    })
+    
+    // Handle errors
+    ws.on('error', (error) => {
+      console.error(`❌ Y.js connection error for "${docName}" (${connectionId}):`, error)
+    })
+    
+  } catch (error) {
+    console.error(`❌ Failed to setup Y.js connection for "${docName}" (${connectionId}):`, error)
+    ws.close(1011, 'Internal Server Error')
+  }
+})
+
+// Keep connections alive
+const interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log('🔄 Cleaning up stale connection')
+      return ws.terminate()
+    }
+    ws.isAlive = false
+    ws.ping()
   })
+}, 30000)
+
+wss.on('close', () => {
+  clearInterval(interval)
 })
 
-wss.on('listening', () => {
-  console.log(`✅ Y.js WebSocket server running on port ${port}`)
-  console.log(`🎯 Ready for Y.js collaborative editing!`)
-  console.log(`📡 WebSocket URL: ws://localhost:${port}/[document-name]`)
+server.listen(port, () => {
+  console.log(`🚀 Y.js WebSocket server running on port ${port}`)
+  console.log('📝 Ready for collaborative editing')
 })
 
-wss.on('error', (error) => {
-  console.error('❌ Y.js WebSocket server error:', error)
+// Handle shutdown gracefully
+process.on('SIGINT', () => {
+  console.log('🛑 Shutting down Y.js WebSocket server...')
+  wss.close(() => {
+    server.close(() => {
+      console.log('✅ Y.js WebSocket server closed')
+      process.exit(0)
+    })
+  })
 })
 
 // Health check and stats
@@ -82,8 +122,10 @@ setInterval(() => {
   const activeConnections = connections.size
   const documents = new Set()
   
-  connections.forEach(({ docName }) => {
-    documents.add(docName)
+  connections.forEach((docConnections) => {
+    docConnections.forEach((connectionId) => {
+      documents.add(connectionId)
+    })
   })
   
   if (activeConnections > 0) {
@@ -91,8 +133,10 @@ setInterval(() => {
     
     // Group by document
     const docCounts = new Map()
-    connections.forEach(({ docName }) => {
-      docCounts.set(docName, (docCounts.get(docName) || 0) + 1)
+    connections.forEach((docConnections) => {
+      docConnections.forEach((connectionId) => {
+        docCounts.set(connectionId, (docCounts.get(connectionId) || 0) + 1)
+      })
     })
     
     docCounts.forEach((count, docName) => {
@@ -101,26 +145,9 @@ setInterval(() => {
   }
 }, 60000)
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down Y.js WebSocket server...')
-  
-  // Close all connections gracefully
-  connections.forEach(({ ws }, connectionId) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.close(1000, 'Server shutting down')
-    }
-  })
-  
-  wss.close(() => {
-    console.log('✅ Y.js WebSocket server closed')
-    process.exit(0)
-  })
-})
-
 // Log startup info
 console.log('📋 Y.js Server Configuration:')
 console.log(`   Port: ${port}`)
 console.log(`   Y.js version: ${require('yjs/package.json').version}`)
 console.log(`   y-websocket version: ${require('y-websocket/package.json').version}`)
-console.log(`   WebSocket compression: enabled`)
+console.log(`   WebSocket compression: disabled`)
