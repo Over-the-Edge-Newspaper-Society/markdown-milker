@@ -13,32 +13,47 @@ interface CrepeEditorProps {
 export function CrepeEditor({ value = '', onChange }: CrepeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const crepeInstance = useRef<Crepe | null>(null);
+  const isInitialized = useRef(false);
 
+  // Initialize editor
   useEffect(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || isInitialized.current) return;
+
+    // Clean up any existing instance
+    if (crepeInstance.current) {
+      crepeInstance.current.destroy();
+      crepeInstance.current = null;
+    }
 
     const crepe = new Crepe({
       root: editorRef.current,
       defaultValue: value,
-      onChange: (markdown: string) => {
-        onChange?.(markdown);
-      },
     });
 
-    crepe.create().then(() => {
-      crepeInstance.current = crepe;
-    });
+    crepe.create();
+    crepeInstance.current = crepe;
+    isInitialized.current = true;
 
     return () => {
-      crepeInstance.current?.destroy();
+      if (crepeInstance.current) {
+        crepeInstance.current.destroy();
+        crepeInstance.current = null;
+        isInitialized.current = false;
+      }
     };
-    // Only run on mount/unmount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // Only run on mount/unmount
 
+  // Handle content updates
   useEffect(() => {
     if (crepeInstance.current && value !== undefined) {
-      crepeInstance.current.setValue(value);
+      // Destroy and recreate the editor with new content
+      crepeInstance.current.destroy();
+      const crepe = new Crepe({
+        root: editorRef.current!,
+        defaultValue: value,
+      });
+      crepe.create();
+      crepeInstance.current = crepe;
     }
   }, [value]);
 
