@@ -71,6 +71,217 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-200;
   }
-} 
+  
+  /* Smooth transitions for theme changes */
+  html {
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  }
+  
+  /* Ensure all elements respect the transition */
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+  }
+}
+
+/* Milkdown editor styles with improved dark mode support */
+.milkdown {
+  @apply p-4 min-h-[400px] bg-background text-foreground transition-colors;
+}
+
+.milkdown .editor {
+  @apply min-h-[500px] outline-none prose prose-sm max-w-none transition-colors;
+  /* Dark mode prose styles */
+  color: hsl(var(--foreground));
+}
+
+.dark .milkdown .editor {
+  @apply prose-invert;
+}
+
+.milkdown .editor p {
+  @apply my-2 text-foreground;
+}
+
+.milkdown .editor h1 {
+  @apply text-3xl font-bold my-4 text-foreground;
+}
+
+.milkdown .editor h2 {
+  @apply text-2xl font-bold my-3 text-foreground;
+}
+
+.milkdown .editor h3 {
+  @apply text-xl font-bold my-2 text-foreground;
+}
+
+.milkdown .editor ul {
+  @apply list-disc pl-6 my-2;
+}
+
+.milkdown .editor ol {
+  @apply list-decimal pl-6 my-2;
+}
+
+.milkdown .editor blockquote {
+  @apply border-l-4 border-border pl-4 my-2 italic bg-muted/50 py-2 rounded-r;
+}
+
+.milkdown .editor code {
+  @apply bg-muted px-1 rounded text-sm text-foreground;
+}
+
+.milkdown .editor pre {
+  @apply bg-muted p-4 rounded my-2 overflow-x-auto border;
+}
+
+.milkdown .editor pre code {
+  @apply bg-transparent p-0;
+}
+
+/* Enhanced Milkdown theme styles for both light and dark */
+.milkdown .editor {
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+}
+
+.milkdown .editor:focus {
+  outline: none;
+}
+
+/* Selection styles that work in both themes */
+.milkdown .editor ::selection {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* Placeholder styles */
+.milkdown .editor .placeholder {
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+}
+
+/* Table styles with theme support */
+.milkdown .editor table {
+  @apply border-collapse border border-border my-4 bg-background;
+}
+
+.milkdown .editor th,
+.milkdown .editor td {
+  @apply border border-border px-3 py-2;
+}
+
+.milkdown .editor th {
+  @apply bg-muted font-semibold;
+}
+
+/* Crepe-specific styling improvements */
+.crepe-editor-container {
+  @apply bg-background text-foreground border-border transition-colors;
+}
+
+/* Ensure Crepe editor respects theme */
+.crepe-editor-container .milkdown-theme-nord,
+.crepe-editor-container .milkdown {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Dark mode specific Crepe adjustments */
+.dark .crepe-editor-container .milkdown-theme-nord,
+.dark .crepe-editor-container .milkdown {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Status indicators and UI elements */
+.status-indicator {
+  @apply transition-colors duration-200;
+}
+
+/* File tree theming */
+.file-tree-container {
+  @apply bg-background border-border transition-colors;
+}
+
+/* Ensure editor toolbar respects theme */
+.milkdown .toolbar,
+.crepe-editor-container .toolbar {
+  @apply bg-background border-border text-foreground;
+}
+
+.dark .milkdown .toolbar,
+.dark .crepe-editor-container .toolbar {
+  @apply bg-background border-border text-foreground;
+}
+
+/* Scrollbar theming */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground));
+}
+
+/* Ensure tooltips and dropdowns respect theme */
+.tooltip,
+.dropdown-content {
+  @apply bg-popover text-popover-foreground border-border;
+}
+
+/* Animation for theme transitions */
+@keyframes theme-transition {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.theme-transitioning {
+  animation: theme-transition 0.2s ease-in-out;
+}
+
+/* Custom focus styles that work in both themes */
+.focus-visible:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Ensure buttons and interactive elements have good contrast */
+.btn-theme-aware {
+  @apply bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground;
+}
+
+/* Loading and status indicators */
+.loading-spinner {
+  border-color: hsl(var(--muted));
+  border-top-color: hsl(var(--primary));
+}
+
+/* Ensure modals and overlays respect theme */
+.modal-overlay {
+  @apply bg-background/80 backdrop-blur-sm;
+}
+
+.modal-content {
+  @apply bg-background text-foreground border-border;
+}

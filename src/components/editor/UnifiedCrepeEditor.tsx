@@ -486,41 +486,60 @@ export function UnifiedCrepeEditor({
   }
 
   return (
-    <div className="h-full w-full relative">
-      {/* Unified status bar */}
-      <div className="flex items-center justify-between p-2 border-b bg-muted/30 text-sm">
+    <div className="h-full w-full relative bg-background text-foreground transition-colors">
+      {/* Unified status bar with theme awareness */}
+      <div className="flex items-center justify-between p-2 border-b bg-muted/30 text-sm backdrop-blur-sm">
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} />
-          <span>{getStatusText()}</span>
+          <div className={`w-2 h-2 rounded-full ${getStatusColor()} transition-colors`} />
+          <span className="font-medium">{getStatusText()}</span>
           
           {isReady && !hasError && (
             <>
               {collaborative && collaborators > 1 && (
-                <span className="text-purple-600">• {collaborators} users</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-purple-600 dark:text-purple-400">•</span>
+                  <span className="text-purple-600 dark:text-purple-400">{collaborators} users</span>
+                </div>
               )}
               {saveCount > 0 && (
-                <span className="text-green-600 text-xs">• {saveCount} saves</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-green-600 dark:text-green-400 text-xs">•</span>
+                  <span className="text-green-600 dark:text-green-400 text-xs">{saveCount} saves</span>
+                </div>
               )}
               {lastSaveTime && (
-                <span className="text-blue-600 text-xs">• {lastSaveTime.toLocaleTimeString()}</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-blue-600 dark:text-blue-400 text-xs">•</span>
+                  <span className="text-blue-600 dark:text-blue-400 text-xs">{lastSaveTime.toLocaleTimeString()}</span>
+                </div>
               )}
-              <span className="text-orange-600 text-xs">• Auto-save {getSaveFrequency()}</span>
+              <div className="flex items-center gap-1">
+                <span className="text-orange-600 dark:text-orange-400 text-xs">•</span>
+                <span className="text-orange-600 dark:text-orange-400 text-xs">Auto-save {getSaveFrequency()}</span>
+              </div>
               {!collaborative && (
-                <span className="text-gray-600 text-xs">• Single user</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-600 dark:text-gray-400 text-xs">•</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-xs">Single user</span>
+                </div>
               )}
             </>
           )}
         </div>
         
-        <div className="text-xs text-muted-foreground">
-          {documentId} • {collaborative ? 'Collaborative' : 'Solo'} Mode
+        <div className="text-xs text-muted-foreground flex items-center gap-2">
+          <span>{documentId}</span>
+          <span>•</span>
+          <span className={collaborative ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}>
+            {collaborative ? 'Collaborative' : 'Solo'} Mode
+          </span>
         </div>
       </div>
 
-      {/* Unified editor container */}
+      {/* Unified editor container with theme-aware styling */}
       <div 
         ref={containerRef}
-        className="h-full w-full"
+        className="h-full w-full bg-background text-foreground transition-colors crepe-editor-container"
         style={{ 
           height: 'calc(100% - 48px)',
           width: '100%'
@@ -528,10 +547,10 @@ export function UnifiedCrepeEditor({
       />
       
       {!isReady && (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-background/80">
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-background/80 backdrop-blur-sm transition-colors">
           <div className="text-center">
-            <div className={`animate-spin w-8 h-8 border-2 ${collaborative ? 'border-green-500' : 'border-blue-500'} border-t-transparent rounded-full mx-auto mb-3`}></div>
-            <div className="font-medium">
+            <div className={`animate-spin w-8 h-8 border-2 ${collaborative ? 'border-green-500 dark:border-green-400' : 'border-blue-500 dark:border-blue-400'} border-t-transparent rounded-full mx-auto mb-3`}></div>
+            <div className="font-medium text-foreground">
               {isLoading ? `Loading ${collaborative ? 'Collaborative' : 'Solo'} Editor...` : 'Preparing editor...'}
             </div>
             <div className="text-xs mt-1 text-muted-foreground">
@@ -540,7 +559,7 @@ export function UnifiedCrepeEditor({
                 : 'Full Crepe features for single-user editing'
               }
             </div>
-            <div className={`text-xs ${collaborative ? 'text-green-600' : 'text-blue-600'} mt-1`}>
+            <div className={`text-xs ${collaborative ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'} mt-1`}>
               ✅ Unified Crepe editor • Auto-save {getSaveFrequency()}
             </div>
           </div>
