@@ -349,11 +349,6 @@
   fill: var(--crepe-on-surface-variant);
 }
 
-/* Link importer area */
-.crepe-editor-container .milkdown-image-block .link-importer {
-  margin-top: 0.5rem;
-}
-
 /* Link input area */
 .crepe-editor-container .milkdown-image-block .link-input-area {
   background-color: var(--crepe-bg) !important;

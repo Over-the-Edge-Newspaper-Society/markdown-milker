@@ -40,7 +40,7 @@ export function MainLayout() {
               </div>
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Markdown Editor</h1>
+              <h1 className="text-lg font-semibold">Markdown Milker</h1>
               <p className="text-xs text-muted-foreground hidden sm:block">
                 Collaborative editing with drag & drop and asset management
               </p>
