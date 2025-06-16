@@ -1,4 +1,4 @@
-// src/components/editor/UnifiedCrepeEditor.tsx (Fixed - Proper Cleanup Order)
+// src/components/editor/UnifiedCrepeEditor.tsx (Updated with Fixed Toolbar)
 'use client'
 
 import { useRef, useState, useMemo, useEffect, useCallback } from 'react'
@@ -8,6 +8,24 @@ import { useContentSync } from './hooks/useContentSync'
 import { useImageManagement } from './hooks/useImageManagement'
 import { EditorStatusBar } from './components/EditorStatusBar'
 import { ImagePicker, type ImagePickerRef } from './image-picker'
+import { Button } from '@/components/ui/button'
+import { 
+  Bold, 
+  Italic, 
+  Strikethrough, 
+  Code, 
+  Link, 
+  List, 
+  ListOrdered, 
+  Quote, 
+  Image,
+  Heading1,
+  Heading2,
+  Heading3,
+  Table,
+  Minus
+} from 'lucide-react'
+import { commandsCtx } from '@milkdown/kit/core'
 
 // Import Crepe core styles
 import '@milkdown/crepe/theme/common/style.css'
@@ -24,6 +42,122 @@ interface UnifiedCrepeEditorProps {
   wsUrl?: string
   collaborative?: boolean
   onImageLibraryOpen?: () => void
+}
+
+// Fixed Toolbar Component
+function FixedToolbar({ 
+  builder, 
+  onImageClick 
+}: { 
+  builder: any
+  onImageClick: () => void 
+}) {
+  const handleCommand = useCallback((command: string) => {
+    if (!builder) return
+    
+    try {
+      builder.editor.action((ctx: any) => {
+        const commands = ctx.get(commandsCtx)
+        
+        switch (command) {
+          case 'bold':
+            commands.call('ToggleStrong')
+            break
+          case 'italic':
+            commands.call('ToggleEmphasis')
+            break
+          case 'strikethrough':
+            commands.call('ToggleStrikethrough')
+            break
+          case 'code':
+            commands.call('ToggleInlineCode')
+            break
+          case 'link':
+            commands.call('ToggleLink')
+            break
+          case 'bulletList':
+            commands.call('WrapInBulletList')
+            break
+          case 'orderedList':
+            commands.call('WrapInOrderedList')
+            break
+          case 'blockquote':
+            commands.call('WrapInBlockquote')
+            break
+          case 'h1':
+            commands.call('TurnIntoHeading', { level: 1 })
+            break
+          case 'h2':
+            commands.call('TurnIntoHeading', { level: 2 })
+            break
+          case 'h3':
+            commands.call('TurnIntoHeading', { level: 3 })
+            break
+          case 'hr':
+            commands.call('InsertHr')
+            break
+          case 'table':
+            commands.call('InsertTable')
+            break
+          case 'image':
+            onImageClick()
+            break
+        }
+      })
+    } catch (error) {
+      console.warn('Command failed:', command, error)
+    }
+  }, [builder, onImageClick])
+
+  const toolbarItems = [
+    { icon: Bold, command: 'bold', label: 'Bold' },
+    { icon: Italic, command: 'italic', label: 'Italic' },
+    { icon: Strikethrough, command: 'strikethrough', label: 'Strikethrough' },
+    { type: 'divider' },
+    { icon: Heading1, command: 'h1', label: 'Heading 1' },
+    { icon: Heading2, command: 'h2', label: 'Heading 2' },
+    { icon: Heading3, command: 'h3', label: 'Heading 3' },
+    { type: 'divider' },
+    { icon: Code, command: 'code', label: 'Inline Code' },
+    { icon: Link, command: 'link', label: 'Link' },
+    { type: 'divider' },
+    { icon: List, command: 'bulletList', label: 'Bullet List' },
+    { icon: ListOrdered, command: 'orderedList', label: 'Numbered List' },
+    { icon: Quote, command: 'blockquote', label: 'Quote' },
+    { type: 'divider' },
+    { icon: Table, command: 'table', label: 'Table' },
+    { icon: Minus, command: 'hr', label: 'Horizontal Rule' },
+    { icon: Image, command: 'image', label: 'Image' },
+  ]
+
+  return (
+    <div className="fixed-toolbar flex items-center gap-1 p-2 bg-background border border-border rounded-lg shadow-md mb-4 sticky top-0 z-20 overflow-x-auto">
+      {toolbarItems.map((item, index) => {
+        if (item.type === 'divider') {
+          return (
+            <div
+              key={`divider-${index}`}
+              className="w-px h-6 bg-border mx-1 flex-shrink-0"
+            />
+          )
+        }
+
+        const Icon = item.icon!
+        return (
+          <Button
+            key={item.command}
+            variant="ghost"
+            size="sm"
+            onClick={() => handleCommand(item.command!)}
+            className="h-8 w-8 p-0 flex-shrink-0"
+            title={item.label}
+          >
+            <Icon className="h-4 w-4" />
+          </Button>
+        )
+      })}
+    </div>
+  )
 }
 
 export function UnifiedCrepeEditor({ 
@@ -69,7 +203,9 @@ export function UnifiedCrepeEditor({
     containerRef,
     initialContent,
     collaborative,
-    onImageUpload: handleCustomImageUpload
+    onImageUpload: handleCustomImageUpload,
+    // Disable the default floating toolbar
+    disableToolbar: true
   })
 
   const {
@@ -106,6 +242,14 @@ export function UnifiedCrepeEditor({
   const handleImageSelect = useMemo(() => {
     return createImageSelectHandler(builder, getContent, saveContent)
   }, [createImageSelectHandler, builder, getContent, saveContent])
+
+  // Handle toolbar image button click
+  const handleToolbarImageClick = useCallback(() => {
+    setShowImagePicker(true)
+    if (onImageLibraryOpen) {
+      onImageLibraryOpen()
+    }
+  }, [onImageLibraryOpen])
 
   // Set up image block click interception (maintaining original functionality)
   useEffect(() => {
@@ -211,7 +355,7 @@ export function UnifiedCrepeEditor({
 
   return (
     <div className="h-full w-full relative bg-background text-foreground transition-colors">
-      {/* Image block button styling - maintain original styling */}
+      {/* Enhanced image block button styling */}
       <style dangerouslySetInnerHTML={{
         __html: `
           .milkdown-image-block .uploader {
@@ -239,6 +383,11 @@ export function UnifiedCrepeEditor({
             border-radius: 4px !important;
             padding: 4px 8px !important;
           }
+          
+          /* Hide the default floating toolbar */
+          .milkdown-toolbar {
+            display: none !important;
+          }
         `
       }} />
       
@@ -254,11 +403,22 @@ export function UnifiedCrepeEditor({
         lastSaveTime={lastSaveTime}
       />
 
+      {/* Fixed Toolbar */}
+      {isReady && !isUnmountingRef.current && (
+        <div className="px-4 pt-4">
+          <FixedToolbar 
+            builder={builder} 
+            onImageClick={handleToolbarImageClick}
+          />
+        </div>
+      )}
+
+      {/* Editor Container */}
       <div 
         ref={containerRef}
         className="h-full w-full crepe-editor-container overflow-auto"
         style={{ 
-          height: 'calc(100% - 48px)',
+          height: isReady ? 'calc(100% - 112px)' : 'calc(100% - 48px)', // Adjust for toolbar
           width: '100%',
           overflowY: 'auto',
           overflowX: 'hidden'
