@@ -1,4 +1,4 @@
-// src/components/editor/hooks/useImageManagement.ts (Updated with Original Implementation)
+// src/components/editor/hooks/useImageManagement.ts (Fixed - More Specific Click Detection)
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
@@ -363,19 +363,27 @@ export function useImageManagement() {
     }
   }, [activeDirectory, currentImageBlock, insertImageViaAPI, insertImageIntoBlock, insertMarkdownFallback, pendingImageResolve])
 
-  // Set up click interception for image block "Browse Library" buttons
+  // FIXED: More specific click interception for image block "Browse Library" buttons
   const setupImageBlockInterception = useCallback((containerRef: React.RefObject<HTMLDivElement>, isReady: boolean) => {
     if (!containerRef.current || !isReady) return
 
     const handleImageBlockClick = (event: Event) => {
       const target = event.target as HTMLElement
       
-      // Check if this is the "Browse Library" button in an image block
-      if (target.classList.contains('uploader') || 
-          target.closest('.uploader') ||
-          (target.textContent && target.textContent.includes('Browse Library'))) {
-        
-        console.log('📸 Image block Browse Library clicked!')
+      // FIXED: Much more specific targeting to avoid false positives
+      // Only trigger for the actual button/label elements, not any text content
+      const isUploaderButton = (
+        // Direct uploader class
+        target.classList.contains('uploader') ||
+        // Parent has uploader class (for icons/text inside the button)
+        target.parentElement?.classList.contains('uploader') ||
+        // Label element with for attribute pointing to file input
+        (target.tagName === 'LABEL' && target.getAttribute('for') && 
+         target.closest('.milkdown-image-block')?.querySelector(`input[id="${target.getAttribute('for')}"]`))
+      )
+      
+      if (isUploaderButton) {
+        console.log('📸 Image block Browse Library button clicked!')
         event.preventDefault()
         event.stopPropagation()
         
@@ -390,16 +398,21 @@ export function useImageManagement() {
         setShowImagePicker(true)
         return false
       }
+      
+      // REMOVED: The problematic text content check that was causing false positives
+      // No longer checking for text content containing "Browse Library"
     }
 
-    // Add event listener with capture to intercept before default behavior
-    containerRef.current.addEventListener('click', handleImageBlockClick, true)
-    
-    // Also listen for file input clicks and redirect them
+    // FIXED: Also intercept file input clicks more specifically
     const handleFileInputClick = (event: Event) => {
       const target = event.target as HTMLInputElement
-      if (target.type === 'file' && target.accept?.includes('image')) {
-        console.log('📸 File input intercepted!')
+      
+      // Only intercept file inputs that are specifically for images within image blocks
+      if (target.type === 'file' && 
+          target.accept?.includes('image') && 
+          target.closest('.milkdown-image-block')) {
+        
+        console.log('📸 File input in image block intercepted!')
         event.preventDefault()
         event.stopPropagation()
         
@@ -415,6 +428,8 @@ export function useImageManagement() {
       }
     }
     
+    // Add event listeners with capture to intercept before default behavior
+    containerRef.current.addEventListener('click', handleImageBlockClick, true)
     containerRef.current.addEventListener('click', handleFileInputClick, true)
 
     return () => {
