@@ -1,4 +1,4 @@
-// src/components/editor/image-picker.tsx
+// src/components/editor/image-picker.tsx (Fixed - Single Close Button)
 'use client'
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
@@ -20,8 +20,7 @@ import {
   Search, 
   Check,
   FileImage,
-  Eye,
-  X
+  Eye
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editor-store'
@@ -216,21 +215,11 @@ export const ImagePicker = forwardRef<ImagePickerRef, ImagePickerProps>(({
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-6xl h-[75vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-6 pb-0 flex-shrink-0 flex flex-row items-center justify-between">
-            <div>
-              <DialogTitle>Insert Image</DialogTitle>
-              <DialogDescription>
-                Choose an existing image or upload a new one to your assets library ({activeDir}/_assets).
-              </DialogDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDialogClose}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+          <DialogHeader className="p-6 pb-0 flex-shrink-0">
+            <DialogTitle>Insert Image</DialogTitle>
+            <DialogDescription>
+              Choose an existing image or upload a new one to your assets library ({activeDir}/_assets).
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-1 gap-0 overflow-hidden min-h-0">

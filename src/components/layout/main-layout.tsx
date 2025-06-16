@@ -1,15 +1,32 @@
-// src/components/layout/main-layout.tsx
+// src/components/layout/main-layout.tsx (Updated with Image Library Button)
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { EnhancedDirectoryTree } from '../file-tree/directory-tree'
 import { EditorArea } from '../editor/editor-area'
 import { ThemeToggle } from '../theme/theme-toggle'
+import { ImagePicker } from '../editor/image-picker'
 import { useTheme } from '../theme/theme-provider'
 import { FileText, Users, Zap, FolderTree, Images } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export function MainLayout() {
   const { actualTheme } = useTheme()
+  const [showImageLibrary, setShowImageLibrary] = useState(false)
+
+  const handleImageLibraryToggle = () => {
+    setShowImageLibrary(true)
+  }
+
+  const handleImageSelect = (imagePath: string) => {
+    console.log('📸 Image selected from header library:', imagePath)
+    // Copy to clipboard for easy pasting
+    navigator.clipboard.writeText(`![Image](${imagePath})`).then(() => {
+      console.log('📋 Image markdown copied to clipboard')
+    }).catch((err) => {
+      console.warn('Failed to copy to clipboard:', err)
+    })
+  }
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground transition-colors">
@@ -57,6 +74,18 @@ export function MainLayout() {
             <Users className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Collaborative</span>
           </div>
+
+          {/* Image Library Button */}
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleImageLibraryToggle}
+            className="flex items-center gap-2"
+            title="Open Image Library"
+          >
+            <Images className="h-4 w-4" />
+            <span className="hidden sm:inline">Library</span>
+          </Button>
           
           <ThemeToggle 
             showLabel={false}
@@ -75,6 +104,15 @@ export function MainLayout() {
           <EditorArea />
         </div>
       </div>
+
+      {/* Global Image Library Dialog */}
+      <ImagePicker
+        onImageSelect={handleImageSelect}
+        activeDir="docs"
+        trigger={null}
+        open={showImageLibrary}
+        onOpenChange={setShowImageLibrary}
+      />
     </div>
   )
 }

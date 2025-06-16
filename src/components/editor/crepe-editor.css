@@ -1,0 +1,639 @@
+/* ========================================
+   CREPE EDITOR THEME SYSTEM
+   ======================================== */
+
+/* Base Crepe container styling */
+.crepe-editor-container {
+  @apply bg-background text-foreground border-border transition-colors;
+  
+  /* CRITICAL: Proper height and overflow for scrolling */
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* Container itself doesn't scroll */
+  display: flex;
+  flex-direction: column;
+  
+  /* Define Crepe-specific theme variables */
+  --crepe-bg: hsl(var(--background));
+  --crepe-fg: hsl(var(--foreground));
+  --crepe-surface: hsl(var(--card));
+  --crepe-surface-variant: hsl(var(--muted));
+  --crepe-on-surface: hsl(var(--card-foreground));
+  --crepe-on-surface-variant: hsl(var(--muted-foreground));
+  --crepe-outline: hsl(var(--border));
+  --crepe-primary: hsl(var(--primary));
+  --crepe-primary-fg: hsl(var(--primary-foreground));
+  --crepe-secondary: hsl(var(--secondary));
+  --crepe-secondary-fg: hsl(var(--secondary-foreground));
+  --crepe-accent: hsl(var(--accent));
+  --crepe-accent-fg: hsl(var(--accent-foreground));
+  --crepe-popover: hsl(var(--popover));
+  --crepe-popover-fg: hsl(var(--popover-foreground));
+  --crepe-destructive: hsl(var(--destructive));
+  --crepe-destructive-fg: hsl(var(--destructive-foreground));
+  
+  /* Shadows */
+  --crepe-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --crepe-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --crepe-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .crepe-editor-container {
+  /* Adjust shadows for dark mode */
+  --crepe-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --crepe-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --crepe-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   CORE MILKDOWN/CREPE ELEMENTS - SCROLL FIX
+   ======================================== */
+
+/* Main editor container - CRITICAL SCROLL FIX */
+.crepe-editor-container .milkdown {
+  background-color: var(--crepe-bg);
+  color: var(--crepe-fg);
+  border-color: var(--crepe-outline);
+  padding: 1rem;
+  min-height: 100%;
+  height: 100%;
+  width: 100%;
+  transition: all 0.2s ease;
+  
+  /* SCROLL FIX: Allow content to be scrollable */
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Editor content area - SCROLL FIX */
+.crepe-editor-container .milkdown .editor {
+  background-color: var(--crepe-bg);
+  color: var(--crepe-fg);
+  min-height: calc(100vh - 200px); /* Ensure enough minimum height */
+  max-height: none; /* Remove any max-height constraints */
+  height: auto; /* Allow natural height expansion */
+  outline: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  padding-bottom: 200px; /* Add bottom padding for easier editing */
+  
+  /* CRITICAL: Remove any height constraints that prevent scrolling */
+  overflow: visible;
+  width: 100%;
+}
+
+/* Ensure ProseMirror editor respects scrolling */
+.crepe-editor-container .ProseMirror {
+  outline: none;
+  min-height: calc(100vh - 250px);
+  height: auto;
+  overflow: visible;
+  padding-bottom: 200px;
+}
+
+/* Selection styles */
+.crepe-editor-container .milkdown .editor ::selection {
+  background-color: var(--crepe-accent);
+  color: var(--crepe-accent-fg);
+}
+
+/* Placeholder text */
+.crepe-editor-container .milkdown .editor .placeholder,
+.crepe-editor-container .crepe-placeholder::before {
+  color: var(--crepe-on-surface-variant);
+}
+
+/* ========================================
+   TYPOGRAPHY ELEMENTS
+   ======================================== */
+
+.crepe-editor-container .milkdown .editor p {
+  margin: 0.5rem 0;
+  color: var(--crepe-fg);
+}
+
+.crepe-editor-container .milkdown .editor h1,
+.crepe-editor-container .milkdown .editor h2,
+.crepe-editor-container .milkdown .editor h3,
+.crepe-editor-container .milkdown .editor h4,
+.crepe-editor-container .milkdown .editor h5,
+.crepe-editor-container .milkdown .editor h6 {
+  color: var(--crepe-fg);
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.crepe-editor-container .milkdown .editor ul,
+.crepe-editor-container .milkdown .editor ol {
+  list-style-position: inside;
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.crepe-editor-container .milkdown .editor blockquote {
+  border-left: 4px solid var(--crepe-outline);
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  font-style: italic;
+  background-color: var(--crepe-surface-variant);
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+}
+
+/* ========================================
+   CODE BLOCKS & SYNTAX HIGHLIGHTING
+   ======================================== */
+
+.crepe-editor-container .milkdown .editor code {
+  background-color: var(--crepe-surface-variant);
+  color: var(--crepe-primary);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.crepe-editor-container .milkdown .editor pre {
+  background-color: var(--crepe-surface-variant);
+  color: var(--crepe-fg);
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--crepe-outline);
+}
+
+.crepe-editor-container .milkdown .editor pre code {
+  background-color: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+/* Crepe-specific code block styling */
+.crepe-editor-container .milkdown-code-block,
+.crepe-editor-container [class*="code-block"] {
+  background-color: var(--crepe-surface-variant);
+  border: 1px solid var(--crepe-outline);
+  border-radius: 0.375rem;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.crepe-editor-container .cm-editor {
+  background-color: var(--crepe-surface-variant);
+  color: var(--crepe-fg);
+  max-height: 400px; /* Limit code block height for better UX */
+  overflow-y: auto;
+}
+
+.crepe-editor-container .cm-content {
+  background-color: var(--crepe-surface-variant);
+  color: var(--crepe-fg);
+}
+
+.crepe-editor-container .cm-focused {
+  outline: 2px solid var(--crepe-primary);
+  outline-offset: 2px;
+}
+
+.crepe-editor-container .cm-gutter {
+  background-color: var(--crepe-surface-variant);
+  color: var(--crepe-on-surface-variant);
+  border-right: 1px solid var(--crepe-outline);
+}
+
+/* ========================================
+   TABLES
+   ======================================== */
+
+.crepe-editor-container .milkdown .editor table {
+  border-collapse: collapse;
+  border: 1px solid var(--crepe-outline);
+  margin: 1rem 0;
+  width: 100%;
+  background-color: var(--crepe-bg);
+}
+
+.crepe-editor-container .milkdown .editor th,
+.crepe-editor-container .milkdown .editor td {
+  border: 1px solid var(--crepe-outline);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.crepe-editor-container .milkdown .editor th {
+  background-color: var(--crepe-surface-variant);
+  font-weight: 600;
+  color: var(--crepe-fg);
+}
+
+.crepe-editor-container .milkdown .editor td {
+  background-color: var(--crepe-bg);
+  color: var(--crepe-fg);
+}
+
+/* ========================================
+   TOOLBAR & UI CONTROLS
+   ======================================== */
+
+.crepe-editor-container .milkdown-toolbar,
+.crepe-editor-container [class*="toolbar"] {
+  background-color: var(--crepe-surface);
+  border: 1px solid var(--crepe-outline);
+  border-radius: 0.375rem;
+  box-shadow: var(--crepe-shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.crepe-editor-container .toolbar-item,
+.crepe-editor-container [class*="toolbar-item"] {
+  background-color: transparent;
+  color: var(--crepe-on-surface-variant);
+  border: none;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.crepe-editor-container .toolbar-item:hover,
+.crepe-editor-container [class*="toolbar-item"]:hover {
+  background-color: var(--crepe-accent);
+  color: var(--crepe-accent-fg);
+}
+
+.crepe-editor-container .toolbar-item.active,
+.crepe-editor-container [class*="toolbar-item"].active {
+  background-color: var(--crepe-primary);
+  color: var(--crepe-primary-fg);
+}
+
+/* ========================================
+   DROPDOWN MENUS & POPUPS
+   ======================================== */
+
+.crepe-editor-container .milkdown-slash-menu,
+.crepe-editor-container [class*="slash-menu"],
+.crepe-editor-container [class*="dropdown"],
+.crepe-editor-container [class*="menu"] {
+  background-color: var(--crepe-popover);
+  color: var(--crepe-popover-fg);
+  border: 1px solid var(--crepe-outline);
+  border-radius: 0.5rem;
+  box-shadow: var(--crepe-shadow-lg);
+  overflow: hidden;
+  position: fixed;
+  z-index: 50;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.crepe-editor-container .menu-item,
+.crepe-editor-container [class*="menu-item"],
+.crepe-editor-container .dropdown-item {
+  background-color: transparent;
+  color: var(--crepe-popover-fg);
+  padding: 0.5rem 0.75rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.crepe-editor-container .menu-item:hover,
+.crepe-editor-container [class*="menu-item"]:hover,
+.crepe-editor-container .dropdown-item:hover,
+.crepe-editor-container .menu-item.hover,
+.crepe-editor-container .menu-item.active {
+  background-color: var(--crepe-accent);
+  color: var(--crepe-accent-fg);
+}
+
+/* ========================================
+   IMAGE BLOCKS - FIXED BUTTON SIZE
+   ======================================== */
+
+/* Main image block container */
+.crepe-editor-container .milkdown-image-block {
+  background-color: var(--crepe-bg);
+  border: 2px solid var(--crepe-outline);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin: 1rem 0;
+  transition: all 0.2s ease;
+}
+
+.crepe-editor-container .milkdown-image-block:hover {
+  border-color: var(--crepe-primary);
+  box-shadow: 0 0 0 1px var(--crepe-primary);
+}
+
+.crepe-editor-container .milkdown-image-block.selected {
+  border-color: var(--crepe-primary);
+  box-shadow: 0 0 0 2px var(--crepe-primary);
+  background-color: var(--crepe-surface);
+}
+
+/* Image edit area */
+.crepe-editor-container .milkdown-image-block .image-edit {
+  background-color: var(--crepe-bg);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+}
+
+/* Image icon styling */
+.crepe-editor-container .milkdown-image-block .image-icon {
+  color: var(--crepe-on-surface-variant);
+}
+
+.crepe-editor-container .milkdown-image-block .image-icon svg {
+  fill: var(--crepe-on-surface-variant);
+}
+
+/* Link importer area */
+.crepe-editor-container .milkdown-image-block .link-importer {
+  margin-top: 0.5rem;
+}
+
+/* Link input area */
+.crepe-editor-container .milkdown-image-block .link-input-area {
+  background-color: var(--crepe-bg) !important;
+  color: var(--crepe-fg) !important;
+  border: 1px solid var(--crepe-outline) !important;
+  border-radius: 0.375rem !important;
+  padding: 0.5rem !important;
+  width: 100% !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.crepe-editor-container .milkdown-image-block .link-input-area:focus {
+  border-color: var(--crepe-primary) !important;
+  box-shadow: 0 0 0 2px var(--crepe-primary) !important;
+  outline: none !important;
+}
+
+/* Placeholder area */
+.crepe-editor-container .milkdown-image-block .placeholder {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: var(--crepe-surface-variant);
+  border-radius: 0.375rem;
+  border: 2px dashed var(--crepe-outline);
+}
+
+/* Hide the actual file input */
+.crepe-editor-container .milkdown-image-block .hidden {
+  display: none !important;
+}
+
+/* Browse Library button styling - FIXED SIZE */
+.crepe-editor-container .milkdown-image-block .uploader {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  padding: 0.25rem 0.5rem !important; /* Smaller padding */
+  background-color: var(--crepe-primary) !important;
+  color: var(--crepe-primary-fg) !important;
+  border: none !important;
+  border-radius: 0.25rem !important; /* Smaller border radius */
+  text-decoration: none !important;
+  font-size: 0.75rem !important; /* Smaller font size */
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important; /* Tighter line height */
+  min-height: auto !important; /* Remove any min-height */
+  height: auto !important; /* Auto height */
+}
+
+.crepe-editor-container .milkdown-image-block .uploader:hover {
+  background-color: var(--crepe-accent) !important;
+  color: var(--crepe-accent-fg) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--crepe-shadow-sm) !important;
+}
+
+.crepe-editor-container .milkdown-image-block .uploader:active {
+  transform: translateY(0) !important;
+}
+
+/* Placeholder text */
+.crepe-editor-container .milkdown-image-block .text {
+  color: var(--crepe-on-surface-variant) !important;
+  font-size: 0.75rem !important; /* Smaller text to match button */
+  flex: 1 !important;
+  line-height: 1.3 !important;
+}
+
+/* Generic image placeholder styling */
+.crepe-editor-container .image-placeholder,
+.crepe-editor-container .empty-image-inline {
+  background-color: var(--crepe-surface-variant);
+  color: var(--crepe-on-surface-variant);
+  border: 2px dashed var(--crepe-outline);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  text-align: center;
+  margin: 0.5rem 0;
+}
+
+/* ========================================
+   LINK TOOLTIPS & PREVIEWS
+   ======================================== */
+
+.crepe-editor-container .milkdown-link-preview,
+.crepe-editor-container .milkdown-link-edit,
+.crepe-editor-container [class*="link-tooltip"],
+.crepe-editor-container [class*="link-preview"] {
+  background-color: var(--crepe-popover);
+  color: var(--crepe-popover-fg);
+  border: 1px solid var(--crepe-outline);
+  border-radius: 0.375rem;
+  box-shadow: var(--crepe-shadow-md);
+  padding: 0.5rem;
+  position: fixed;
+  z-index: 50;
+}
+
+/* ========================================
+   FORM INPUTS & BUTTONS
+   ======================================== */
+
+.crepe-editor-container input,
+.crepe-editor-container textarea,
+.crepe-editor-container select {
+  background-color: var(--crepe-bg);
+  color: var(--crepe-fg);
+  border: 1px solid var(--crepe-outline);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.crepe-editor-container input:focus,
+.crepe-editor-container textarea:focus,
+.crepe-editor-container select:focus {
+  outline: none;
+  border-color: var(--crepe-primary);
+  box-shadow: 0 0 0 2px var(--crepe-primary);
+}
+
+.crepe-editor-container button {
+  background-color: var(--crepe-secondary);
+  color: var(--crepe-secondary-fg);
+  border: 1px solid var(--crepe-outline);
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.crepe-editor-container button:hover {
+  background-color: var(--crepe-accent);
+  color: var(--crepe-accent-fg);
+}
+
+.crepe-editor-container button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   BLOCK HANDLES & DRAG CONTROLS
+   ======================================== */
+
+.crepe-editor-container .milkdown-block-handle,
+.crepe-editor-container [class*="block-handle"] {
+  background-color: var(--crepe-surface);
+  border: 1px solid var(--crepe-outline);
+  border-radius: 0.375rem;
+  box-shadow: var(--crepe-shadow-sm);
+  position: fixed;
+  z-index: 40;
+}
+
+.crepe-editor-container .operation-item {
+  background-color: transparent;
+  color: var(--crepe-on-surface-variant);
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.crepe-editor-container .operation-item:hover {
+  background-color: var(--crepe-accent);
+  color: var(--crepe-accent-fg);
+}
+
+/* ========================================
+   SCROLLBARS - ENHANCED
+   ======================================== */
+
+.crepe-editor-container ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.crepe-editor-container ::-webkit-scrollbar-track {
+  background: var(--crepe-surface-variant);
+  border-radius: 4px;
+}
+
+.crepe-editor-container ::-webkit-scrollbar-thumb {
+  background: var(--crepe-on-surface-variant);
+  border-radius: 4px;
+  border: 2px solid var(--crepe-surface-variant);
+}
+
+.crepe-editor-container ::-webkit-scrollbar-thumb:hover {
+  background: var(--crepe-fg);
+}
+
+/* Firefox scrollbar styling */
+.crepe-editor-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--crepe-on-surface-variant) var(--crepe-surface-variant);
+}
+
+/* ========================================
+   SPECIAL CONTENT TYPES
+   ======================================== */
+
+/* LaTeX/Math content */
+.crepe-editor-container .milkdown-latex-inline-edit,
+.crepe-editor-container [class*="latex"],
+.crepe-editor-container [class*="math"] {
+  background-color: var(--crepe-surface-variant);
+  color: var(--crepe-primary);
+  border: 1px solid var(--crepe-outline);
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* List items */
+.crepe-editor-container .milkdown-list-item-block .label-wrapper {
+  color: var(--crepe-on-surface-variant);
+}
+
+/* Drop cursor */
+.crepe-editor-container .crepe-drop-cursor {
+  background-color: var(--crepe-primary);
+}
+
+/* Selection indicator for nodes */
+.crepe-editor-container .ProseMirror-selectednode {
+  background-color: var(--crepe-accent);
+  outline: 2px solid var(--crepe-primary);
+  border-radius: 0.25rem;
+}
+
+/* ========================================
+   ANIMATIONS & TRANSITIONS
+   ======================================== */
+
+.crepe-editor-container * {
+  transition: background-color 0.2s ease, 
+              border-color 0.2s ease, 
+              color 0.2s ease, 
+              box-shadow 0.2s ease;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+  .crepe-editor-container .milkdown {
+    padding: 0.5rem;
+  }
+  
+  .crepe-editor-container .milkdown .editor {
+    min-height: calc(100vh - 200px);
+    padding-bottom: 100px;
+  }
+  
+  .crepe-editor-container .ProseMirror {
+    min-height: calc(100vh - 200px);
+    padding-bottom: 100px;
+  }
+  
+  .crepe-editor-container .milkdown-image-block .placeholder {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .crepe-editor-container .milkdown-image-block .uploader {
+    font-size: 0.7rem !important; /* Even smaller on mobile */
+    padding: 0.2rem 0.4rem !important;
+  }
+  
+  .crepe-editor-container .milkdown-image-block .text {
+    font-size: 0.7rem !important;
+  }
+}

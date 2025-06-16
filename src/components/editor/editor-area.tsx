@@ -1,11 +1,12 @@
-// src/components/editor/editor-area.tsx
+// src/components/editor/editor-area.tsx (Updated with Image Library Integration)
 'use client'
 
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { useFileStore } from '@/lib/stores/file-store'
 import { UnifiedCrepeEditor } from './UnifiedCrepeEditor'
 import { useEffect, useCallback, useState, useMemo, useRef } from 'react'
-import { X, FileText, Save, Users, User } from 'lucide-react'
+import { X, FileText, Save, Users, User, Images } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 type EditorMode = 'collaborative' | 'solo'
 
@@ -27,6 +28,7 @@ export function EditorArea() {
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
   const [isManualSaving, setIsManualSaving] = useState(false)
   const [showSaveStatus, setShowSaveStatus] = useState(false)
+  const editorRef = useRef<HTMLDivElement>(null)
 
   // Track saving state to prevent race conditions
   const isSavingRef = useRef(false)
@@ -107,6 +109,20 @@ export function EditorArea() {
       setIsManualSaving(false)
     }
   }, [selectedFile, fileContent, saveToFile, isManualSaving])
+
+  // Function to open image library from editor
+  const handleImageLibraryOpen = useCallback(() => {
+    console.log('📸 Image library requested from editor')
+    // You could emit an event or use a global state to open the main image library
+    // For now, we'll use the editor's built-in image picker
+  }, [])
+
+  // Function to open editor's image picker programmatically
+  const openEditorImagePicker = useCallback(() => {
+    if (editorRef.current && (editorRef.current as any).openImagePicker) {
+      (editorRef.current as any).openImagePicker()
+    }
+  }, [])
 
   // Load file content when selected
   useEffect(() => {
@@ -262,6 +278,18 @@ export function EditorArea() {
         </div>
         
         <div className="flex items-center gap-3">
+          {/* Image Library Button for Editor */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={openEditorImagePicker}
+            className="flex items-center gap-1"
+            title="Open Image Library"
+          >
+            <Images className="h-3 w-3" />
+            <span className="text-xs">Images</span>
+          </Button>
+
           {/* Simple Mode Switch */}
           <div className="flex items-center gap-2">
             <button
@@ -314,16 +342,19 @@ export function EditorArea() {
         </div>
       </div>
 
-      {/* Unified Crepe Editor */}
+      {/* Unified Crepe Editor with proper scrolling */}
       <div className="flex-1 overflow-hidden">
-        <UnifiedCrepeEditor
-          key={`unified-${editorMode}-${selectedFile}-${isFileLoaded}`}
-          documentId={documentId}
-          initialContent={fileContent}
-          onChange={handleEditorChange}
-          wsUrl={process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'}
-          collaborative={editorMode === 'collaborative'}
-        />
+        <div ref={editorRef} className="h-full">
+          <UnifiedCrepeEditor
+            key={`unified-${editorMode}-${selectedFile}-${isFileLoaded}`}
+            documentId={documentId}
+            initialContent={fileContent}
+            onChange={handleEditorChange}
+            wsUrl={process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'}
+            collaborative={editorMode === 'collaborative'}
+            onImageLibraryOpen={handleImageLibraryOpen}
+          />
+        </div>
       </div>
     </div>
   )
