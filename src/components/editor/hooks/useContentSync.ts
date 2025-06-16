@@ -1,4 +1,4 @@
-// src/components/editor/hooks/useContentSync.ts
+// src/components/editor/hooks/useContentSync.ts (Updated to export saveContent)
 'use client'
 
 import { useRef, useCallback, useEffect } from 'react'
@@ -15,7 +15,7 @@ export function useContentSync({ getContent, onChange, collaborative, isReady }:
   const lastContentRef = useRef('')
   const isSavingRef = useRef(false)
 
-  const saveContent = useCallback(async (content: string, context: string = 'auto') => {
+  const saveContent = useCallback(async (content: string, context: string = 'auto'): Promise<boolean> => {
     if (isSavingRef.current || !onChange) return false
     
     let cleanedContent = content
@@ -84,7 +84,7 @@ export function useContentSync({ getContent, onChange, collaborative, isReady }:
   }, [isReady, setupContentMonitoring, cleanup])
 
   return {
-    saveContent,
+    saveContent, // Export this so image management can use it
     cleanup
   }
 }
