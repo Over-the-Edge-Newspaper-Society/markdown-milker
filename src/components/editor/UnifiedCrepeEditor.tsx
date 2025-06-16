@@ -166,17 +166,33 @@ export function UnifiedCrepeEditor({
   const saveContent = useCallback(async (content: string, context: string = 'auto') => {
     if (isSavingRef.current || !onChangeRef.current) return false
     
-    if (content === lastContentRef.current && context !== 'force') {
+    // Clean up the content: remove HTML tags and fix image paths
+    let cleanedContent = content
+      // Remove HTML tags like <br />
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]*>/g, '')
+      // Remove duplicate consecutive newlines
+      .replace(/\n{3,}/g, '\n\n')
+      // Clean up any angle brackets around image paths
+      .replace(/!\[([^\]]*)\]\(<([^>]+)>\)/g, '![$1]($2)')
+      // Trim extra whitespace
+      .trim()
+    
+    if (cleanedContent === lastContentRef.current && context !== 'force') {
       return false
     }
 
     try {
       isSavingRef.current = true
-      console.log(`💾 SAVING [${collaborative ? 'collaborative' : 'solo'}] [${context}]:`, content.length, 'chars')
+      console.log(`💾 SAVING [${collaborative ? 'collaborative' : 'solo'}] [${context}]:`, cleanedContent.length, 'chars')
       
-      await onChangeRef.current(content)
+      if (cleanedContent !== content) {
+        console.log('🧹 Cleaned HTML tags and formatting from content')
+      }
       
-      lastContentRef.current = content
+      await onChangeRef.current(cleanedContent)
+      
+      lastContentRef.current = cleanedContent
       setSaveCount(prev => prev + 1)
       setLastSaveTime(new Date())
       
@@ -191,34 +207,77 @@ export function UnifiedCrepeEditor({
   }, [collaborative])
 
   // Custom image upload handler that opens our image picker
-  const handleCustomImageUpload = useCallback(async (file: File): Promise<string> => {
+  const handleCustomImageUpload = useCallback(async (file?: File | null): Promise<string> => {
+    console.log('📸 Image upload handler called with file:', file ? file.name : 'no file')
+    
     // If a file is provided, upload it directly
     if (file) {
-      return await handleImageUpload(file)
+      console.log('📸 File provided, uploading directly:', file.name)
+      const result = await handleImageUpload(file)
+      
+      // Always return the API URL format for proper loading
+      if (result.startsWith('/api/assets/serve?path=')) {
+        return result
+      } else if (result.startsWith('_assets/')) {
+        const filename = result.replace('_assets/', '')
+        return `/api/assets/serve?path=${encodeURIComponent(filename)}&activeDir=${encodeURIComponent(activeDirectory)}`
+      } else {
+        // Assume it's a filename
+        return `/api/assets/serve?path=${encodeURIComponent(result)}&activeDir=${encodeURIComponent(activeDirectory)}`
+      }
     }
     
     // If no file provided, this means user clicked the upload button
     // Open our custom image picker instead
+    console.log('📸 No file provided, opening image picker')
     setShowImagePicker(true)
     
-    // Return a placeholder - this won't be used since we're opening the picker
-    throw new Error('Opening image picker...')
-  }, [handleImageUpload])
+    // Return a promise that rejects so Milkdown doesn't wait
+    return Promise.reject(new Error('User will select from picker'))
+  }, [handleImageUpload, activeDirectory])
 
   // Enhanced markdown fallback for image insertion
   const insertMarkdownFallback = useCallback((imagePath: string) => {
     try {
       console.log('📸 Using markdown fallback insertion for:', imagePath)
-      const imageMarkdown = `![Image](${imagePath})\n`
       
-      // Try to get current content and append the image
+      // Ensure we use the full API URL for images to work in markdown
+      let finalPath = imagePath
+      
+      // If it's already an API URL, use it as-is
+      if (imagePath.startsWith('/api/assets/serve?path=')) {
+        finalPath = imagePath
+      }
+      // If it's a relative _assets path, convert to API URL
+      else if (imagePath.startsWith('_assets/')) {
+        const filename = imagePath.replace('_assets/', '')
+        finalPath = `/api/assets/serve?path=${encodeURIComponent(filename)}&activeDir=${encodeURIComponent(activeDirectory)}`
+      }
+      // If it's just a filename, convert to API URL
+      else if (!imagePath.startsWith('http') && !imagePath.startsWith('/api/')) {
+        finalPath = `/api/assets/serve?path=${encodeURIComponent(imagePath)}&activeDir=${encodeURIComponent(activeDirectory)}`
+      }
+      
+      // Create clean markdown with proper API URL
+      const imageMarkdown = `![Image](${finalPath})`
+      
+      // Get current content and append the image
       if (builderRef.current && typeof builderRef.current.getMarkdown === 'function') {
         const currentContent = builderRef.current.getMarkdown()
-        const newContent = currentContent + '\n' + imageMarkdown
+        let newContent = currentContent
+        
+        // Add proper spacing
+        if (currentContent && !currentContent.endsWith('\n')) {
+          newContent += '\n\n'
+        } else if (currentContent) {
+          newContent += '\n'
+        }
+        
+        newContent += imageMarkdown
         
         // Save the new content through the normal save mechanism
         saveContent(newContent, 'image-insert-fallback')
-        console.log('✅ Image inserted via markdown fallback')
+        console.log('✅ Image inserted via markdown fallback:', imageMarkdown)
       } else {
         // If editor isn't ready, just trigger save with the markdown
         console.log('✅ Image markdown prepared for insertion')
@@ -229,7 +288,7 @@ export function UnifiedCrepeEditor({
       // Last resort: just notify the user
       alert('Image uploaded successfully, but could not insert automatically. You can reference it with: ![Image](' + imagePath + ')')
     }
-  }, [saveContent])
+  }, [saveContent, activeDirectory])
 
   // Fixed image insertion using proper context objects
   const insertImageIntoEditor = useCallback((imagePath: string) => {
@@ -241,6 +300,25 @@ export function UnifiedCrepeEditor({
 
     try {
       console.log('📸 Inserting image into editor:', imagePath)
+      
+      // Ensure we use the full API URL for proper loading
+      let finalPath = imagePath
+      
+      // If it's already an API URL, use it as-is
+      if (imagePath.startsWith('/api/assets/serve?path=')) {
+        finalPath = imagePath
+      }
+      // If it's a relative _assets path, convert to API URL
+      else if (imagePath.startsWith('_assets/')) {
+        const filename = imagePath.replace('_assets/', '')
+        finalPath = `/api/assets/serve?path=${encodeURIComponent(filename)}&activeDir=${encodeURIComponent(activeDirectory)}`
+      }
+      // If it's just a filename, convert to API URL
+      else if (!imagePath.startsWith('http') && !imagePath.startsWith('/api/')) {
+        finalPath = `/api/assets/serve?path=${encodeURIComponent(imagePath)}&activeDir=${encodeURIComponent(activeDirectory)}`
+      }
+      
+      console.log('📸 Final image URL for insertion:', finalPath)
       
       // Check if we can use the CrepeBuilder's getMarkdown method to verify editor state
       if (typeof builderRef.current.getMarkdown === 'function') {
@@ -258,9 +336,9 @@ export function UnifiedCrepeEditor({
                 const imageNodeType = schema.nodes.image || schema.nodes.imageBlock
                 
                 if (imageNodeType) {
-                  // Create image node
+                  // Create image node with proper API path
                   const imageNode = imageNodeType.create({
-                    src: imagePath,
+                    src: finalPath,
                     alt: 'Uploaded image',
                     title: ''
                   })
@@ -284,22 +362,39 @@ export function UnifiedCrepeEditor({
           })
         } catch (actionError) {
           console.warn('Editor action failed, using markdown fallback:', actionError)
-          insertMarkdownFallback(imagePath)
+          insertMarkdownFallback(finalPath)
         }
       } else {
         // Editor might not be fully ready, use fallback
         console.warn('Editor getMarkdown method not available, using fallback')
-        insertMarkdownFallback(imagePath)
+        insertMarkdownFallback(finalPath)
       }
     } catch (error) {
       console.error('❌ Failed to insert image:', error)
       insertMarkdownFallback(imagePath)
     }
-  }, [isReady, insertMarkdownFallback])
+  }, [isReady, insertMarkdownFallback, activeDirectory])
 
   // Handle image selection from picker
   const handleImageSelect = useCallback((imagePath: string) => {
-    insertImageIntoEditor(imagePath)
+    console.log('📸 Image selected from picker:', imagePath)
+    
+    // The image picker should return the relativePath (_assets/filename)
+    // We'll let insertImageIntoEditor handle the API URL conversion
+    let finalPath = imagePath
+    
+    // If it's already the API URL, extract the relative path and let the insert function handle conversion
+    if (imagePath.startsWith('/api/assets/serve?path=')) {
+      const urlParams = new URLSearchParams(imagePath.split('?')[1])
+      const filename = urlParams.get('path')
+      if (filename) {
+        finalPath = `_assets/${filename}`
+      }
+    }
+    
+    console.log('📸 Final path for insertion:', finalPath)
+    
+    insertImageIntoEditor(finalPath)
     setShowImagePicker(false)
   }, [insertImageIntoEditor])
 
@@ -307,8 +402,19 @@ export function UnifiedCrepeEditor({
   const handleImageUploadAndInsert = useCallback(async (file: File): Promise<string> => {
     try {
       const imagePath = await handleImageUpload(file)
-      insertImageIntoEditor(imagePath)
-      return imagePath
+      
+      // Convert to relative path format for insertion
+      let finalPath = imagePath
+      if (imagePath.startsWith('/api/assets/serve?path=')) {
+        const urlParams = new URLSearchParams(imagePath.split('?')[1])
+        const filename = urlParams.get('path')
+        if (filename) {
+          finalPath = `_assets/${filename}`
+        }
+      }
+      
+      insertImageIntoEditor(finalPath)
+      return finalPath
     } catch (error) {
       console.error('❌ Image upload and insert failed:', error)
       throw error
@@ -563,10 +669,10 @@ export function UnifiedCrepeEditor({
       // Enhanced image block with asset management and custom picker
       builder.addFeature(imageBlock, {
         onUpload: handleCustomImageUpload,
-        blockUploadPlaceholderText: 'Choose an image or paste link',
-        blockUploadButton: 'Choose Image',
-        inlineUploadPlaceholderText: 'Choose image or paste link',
-        inlineUploadButton: 'Choose',
+        blockUploadPlaceholderText: 'Paste image URL or click to browse library',
+        blockUploadButton: 'Browse Library',
+        inlineUploadPlaceholderText: 'Paste image URL or click to browse',
+        inlineUploadButton: 'Browse',
       })
       
       builder.addFeature(blockEdit, {})
@@ -582,9 +688,32 @@ export function UnifiedCrepeEditor({
       console.log('✅ Creating editor instance...')
       await builder.create()
       builderRef.current = builder
-
-      // Setup slash command handling
-      setupImageSlashCommand(builder)
+      
+      // Setup image block click handlers (but not slash commands)
+      setTimeout(() => {
+        if (containerRef.current) {
+          console.log('📸 Setting up image block click handlers')
+          
+          const handleImageBlockClick = (e: Event) => {
+            const target = e.target as HTMLElement
+            
+            // Check if it's our upload button or label
+            if (target.classList.contains('uploader') || 
+                target.textContent?.includes('Browse Library') ||
+                target.textContent?.includes('Browse') ||
+                target.closest('.uploader')) {
+              
+              console.log('📸 Image block upload button clicked')
+              e.preventDefault()
+              e.stopPropagation()
+              setShowImagePicker(true)
+            }
+          }
+          
+          // Add event listener to the container with capture
+          containerRef.current.addEventListener('click', handleImageBlockClick, true)
+        }
+      }, 1000)
 
       if (collaborative) {
         // Collaborative mode: setup Y.js
@@ -608,7 +737,7 @@ export function UnifiedCrepeEditor({
       setIsLoading(false)
       isInitializedRef.current = false
     }
-  }, [collaborative, documentId, initialContent, initializeCollaboration, setupContentMonitoring, handleCustomImageUpload, setupImageSlashCommand])
+  }, [collaborative, documentId, initialContent, initializeCollaboration, setupContentMonitoring, handleCustomImageUpload, showImagePicker])
 
   // Initialize editor on mount
   useEffect(() => {
@@ -671,11 +800,49 @@ export function UnifiedCrepeEditor({
 
   return (
     <div className="h-full w-full relative bg-background text-foreground transition-colors">
+      {/* Image block button styling */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .milkdown-image-block .uploader {
+            cursor: pointer !important;
+            pointer-events: auto !important;
+            display: inline-block !important;
+            padding: 4px 8px !important;
+            background: hsl(var(--primary)) !important;
+            color: hsl(var(--primary-foreground)) !important;
+            border-radius: 4px !important;
+            text-decoration: none !important;
+            font-size: 12px !important;
+            transition: background-color 0.2s !important;
+          }
+          .milkdown-image-block .uploader:hover {
+            background: hsl(var(--primary))/90 !important;
+          }
+          .milkdown-image-block .placeholder {
+            pointer-events: auto !important;
+          }
+          .milkdown-image-block .link-input-area {
+            background: hsl(var(--background)) !important;
+            color: hsl(var(--foreground)) !important;
+            border: 1px solid hsl(var(--border)) !important;
+            border-radius: 4px !important;
+            padding: 4px 8px !important;
+          }
+        `
+      }} />
+      
       {/* Unified status bar with theme awareness */}
       <div className="flex items-center justify-between p-2 border-b bg-muted/30 text-sm backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${getStatusColor()} transition-colors`} />
           <span className="font-medium">{getStatusText()}</span>
+          
+          {showImagePicker && (
+            <div className="flex items-center gap-1">
+              <span className="text-blue-600 dark:text-blue-400">•</span>
+              <span className="text-blue-600 dark:text-blue-400">🖼️ Asset library</span>
+            </div>
+          )}
           
           {isReady && !hasError && (
             <>
