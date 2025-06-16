@@ -1,7 +1,7 @@
-// src/components/editor/UnifiedCrepeEditor.tsx (Updated with Original Image Implementation)
+// src/components/editor/UnifiedCrepeEditor.tsx (Fixed - Proper Cleanup Order)
 'use client'
 
-import { useRef, useState, useMemo, useEffect } from 'react'
+import { useRef, useState, useMemo, useEffect, useCallback } from 'react'
 import { useCrepeEditor } from './hooks/useCrepeEditor'
 import { useCollaboration } from './hooks/useCollaboration'
 import { useContentSync } from './hooks/useContentSync'
@@ -38,6 +38,7 @@ export function UnifiedCrepeEditor({
   const imagePickerRef = useRef<ImagePickerRef>(null)
   const [saveCount, setSaveCount] = useState(0)
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
+  const isUnmountingRef = useRef(false)
 
   // Image management hook with original implementation
   const {
@@ -86,6 +87,8 @@ export function UnifiedCrepeEditor({
     if (!onChange) return undefined
     
     return async (content: string) => {
+      if (isUnmountingRef.current) return
+      
       await onChange(content)
       setSaveCount(prev => prev + 1)
       setLastSaveTime(new Date())
@@ -106,56 +109,103 @@ export function UnifiedCrepeEditor({
 
   // Set up image block click interception (maintaining original functionality)
   useEffect(() => {
+    if (isUnmountingRef.current) return
+    
     const cleanup = setupImageBlockInterception(containerRef, isReady)
     return cleanup
   }, [setupImageBlockInterception, isReady])
 
-  // Initialize editor
+  // Cleanup function that handles proper order
+  const performCleanup = useCallback(() => {
+    console.log('🧹 Starting UnifiedCrepeEditor cleanup...')
+    isUnmountingRef.current = true
+    
+    // Order is important here:
+    // 1. Stop content monitoring first
+    cleanupContentSync()
+    
+    // 2. Clean up collaboration (this will disconnect Y.js)
+    cleanupCollaboration()
+    
+    // 3. Clean up editor last (this destroys Milkdown contexts)
+    cleanupEditor()
+    
+    // 4. Reset image management state
+    setPendingImageResolve(null)
+    setCurrentImageBlock(null)
+    
+    console.log('✅ UnifiedCrepeEditor cleanup completed')
+  }, [cleanupContentSync, cleanupCollaboration, cleanupEditor, setPendingImageResolve, setCurrentImageBlock])
+
+  // Initialize editor with proper error handling
   useEffect(() => {
+    let mounted = true
+    
     const initializeEditor = async () => {
+      if (isUnmountingRef.current) return
+      
       try {
+        console.log(`🚀 Initializing ${collaborative ? 'collaborative' : 'solo'} editor...`)
+        
         const createdBuilder = await createEditor()
-        if (!createdBuilder) return
+        if (!createdBuilder || !mounted || isUnmountingRef.current) return
 
         if (collaborative) {
+          console.log('🤝 Setting up collaboration...')
           await setupCollaboration(createdBuilder)
-          setIsReady(true)
+          
+          if (mounted && !isUnmountingRef.current) {
+            setIsReady(true)
+            console.log('✅ Collaborative editor ready')
+          }
+        } else {
+          if (mounted && !isUnmountingRef.current) {
+            setIsReady(true)
+            console.log('✅ Solo editor ready')
+          }
         }
       } catch (error) {
-        console.error('Failed to initialize editor:', error)
-        setHasError(true)
-        setErrorMessage('Failed to initialize editor')
+        console.error('❌ Failed to initialize editor:', error)
+        if (mounted && !isUnmountingRef.current) {
+          setHasError(true)
+          setErrorMessage('Failed to initialize editor')
+        }
       }
     }
 
     initializeEditor()
+    
+    return () => {
+      mounted = false
+    }
   }, [createEditor, collaborative, setupCollaboration, setIsReady, setHasError, setErrorMessage])
 
-  // Cleanup on unmount
+  // Cleanup on unmount with proper timing
   useEffect(() => {
     return () => {
-      cleanupContentSync()
-      cleanupCollaboration()
-      cleanupEditor()
-      setPendingImageResolve(null)
-      setCurrentImageBlock(null)
+      // Use setTimeout to ensure cleanup happens after all other effects
+      setTimeout(() => {
+        performCleanup()
+      }, 0)
     }
-  }, [cleanupContentSync, cleanupCollaboration, cleanupEditor, setPendingImageResolve, setCurrentImageBlock])
+  }, [performCleanup])
 
   // Public method to open image picker (for external calls)
-  const openImagePicker = () => {
+  const openImagePicker = useCallback(() => {
+    if (isUnmountingRef.current) return
+    
     setShowImagePicker(true)
     if (onImageLibraryOpen) {
       onImageLibraryOpen()
     }
-  }
+  }, [onImageLibraryOpen])
 
   // Expose the openImagePicker method to parent components
   useEffect(() => {
-    if (containerRef.current) {
+    if (containerRef.current && !isUnmountingRef.current) {
       (containerRef.current as any).openImagePicker = openImagePicker
     }
-  }, [])
+  }, [openImagePicker])
 
   const currentConnectionStatus = collaborative ? connectionStatus : 'solo'
 
@@ -216,21 +266,23 @@ export function UnifiedCrepeEditor({
       />
 
       {/* Image Picker Dialog - maintaining original functionality */}
-      <ImagePicker
-        ref={imagePickerRef}
-        onImageSelect={handleImageSelect}
-        activeDir="docs"
-        trigger={null}
-        open={showImagePicker}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleImagePickerClose()
-          }
-        }}
-      />
+      {!isUnmountingRef.current && (
+        <ImagePicker
+          ref={imagePickerRef}
+          onImageSelect={handleImageSelect}
+          activeDir="docs"
+          trigger={null}
+          open={showImagePicker}
+          onOpenChange={(open) => {
+            if (!open && !isUnmountingRef.current) {
+              handleImagePickerClose()
+            }
+          }}
+        />
+      )}
       
       {/* Loading overlay */}
-      {!isReady && (
+      {!isReady && !isUnmountingRef.current && (
         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-background/80 backdrop-blur-sm transition-colors">
           <div className="text-center">
             <div className={`animate-spin w-8 h-8 border-2 ${collaborative ? 'border-green-500 dark:border-green-400' : 'border-blue-500 dark:border-blue-400'} border-t-transparent rounded-full mx-auto mb-3`}></div>

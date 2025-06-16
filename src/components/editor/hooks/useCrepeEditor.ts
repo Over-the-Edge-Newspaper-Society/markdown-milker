@@ -33,15 +33,22 @@ export function useCrepeEditor({
   const [hasError, setHasError] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const isInitializedRef = useRef(false)
+  const isDestroyedRef = useRef(false)
 
   const createEditor = useCallback(async () => {
-    if (!containerRef.current || builderRef.current || isInitializedRef.current) {
-      return null
+    // Prevent multiple initialization
+    if (!containerRef.current || builderRef.current || isInitializedRef.current || isDestroyedRef.current) {
+      console.log('🚫 Editor creation skipped - already initialized or destroyed')
+      return builderRef.current
     }
 
     isInitializedRef.current = true
+    isDestroyedRef.current = false
     
     try {
+      console.log(`🎯 Creating ${collaborative ? 'collaborative' : 'solo'} Crepe editor...`)
+      
+      // Clear container
       containerRef.current.innerHTML = ''
       
       const builder = new CrepeBuilder({
@@ -82,15 +89,29 @@ export function useCrepeEditor({
 
       console.log(`🎯 Creating ${collaborative ? 'collaborative' : 'solo'} Crepe editor...`)
       await builder.create()
+      
+      // Check if we were destroyed during creation
+      if (isDestroyedRef.current) {
+        console.log('🚫 Editor was destroyed during creation, cleaning up...')
+        try {
+          builder.destroy()
+        } catch (error) {
+          console.warn('Warning during post-creation cleanup:', error)
+        }
+        return null
+      }
+      
       builderRef.current = builder
       
       if (!collaborative) {
         setIsReady(true)
       }
       
+      console.log('✅ Crepe editor created successfully')
       return builder
+      
     } catch (error) {
-      console.error('Failed to create editor:', error)
+      console.error('❌ Failed to create editor:', error)
       setHasError(true)
       setErrorMessage('Failed to initialize editor')
       isInitializedRef.current = false
@@ -99,9 +120,13 @@ export function useCrepeEditor({
   }, [containerRef, initialContent, collaborative, onImageUpload])
 
   const getContent = useCallback((): string => {
+    // Safety check - don't try to get content if editor is destroyed
+    if (isDestroyedRef.current || !builderRef.current) {
+      console.warn('⚠️ Attempted to get content from destroyed editor')
+      return ''
+    }
+    
     try {
-      if (!builderRef.current) return ''
-      
       const methods = ['getMarkdown', 'getValue', 'getContent']
       
       for (const method of methods) {
@@ -125,23 +150,36 @@ export function useCrepeEditor({
   }, [])
 
   const cleanup = useCallback(() => {
+    console.log('🧹 Starting Crepe editor cleanup...')
+    
+    // Mark as destroyed first to prevent any new operations
+    isDestroyedRef.current = true
+    
     if (builderRef.current) {
       try {
+        console.log('🗑️ Destroying Crepe builder...')
         builderRef.current.destroy()
+        console.log('✅ Crepe builder destroyed')
       } catch (error) {
-        console.error('Error destroying builder:', error)
+        console.error('⚠️ Error destroying builder:', error)
       }
       builderRef.current = null
     }
     
     if (containerRef.current) {
-      containerRef.current.innerHTML = ''
+      try {
+        containerRef.current.innerHTML = ''
+      } catch (error) {
+        console.error('⚠️ Error clearing container:', error)
+      }
     }
     
     setIsReady(false)
     setHasError(false)
     setErrorMessage('')
     isInitializedRef.current = false
+    
+    console.log('✅ Crepe editor cleanup completed')
   }, [containerRef])
 
   return {

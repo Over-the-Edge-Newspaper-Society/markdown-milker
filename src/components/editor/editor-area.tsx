@@ -1,4 +1,4 @@
-// src/components/editor/editor-area.tsx (Updated with Image Library Integration)
+// src/components/editor/editor-area.tsx (Fixed - Better Key Strategy)
 'use client'
 
 import { useEditorStore } from '@/lib/stores/editor-store'
@@ -28,12 +28,18 @@ export function EditorArea() {
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
   const [isManualSaving, setIsManualSaving] = useState(false)
   const [showSaveStatus, setShowSaveStatus] = useState(false)
+  const [editorInstanceId, setEditorInstanceId] = useState(0)
   const editorRef = useRef<HTMLDivElement>(null)
 
   // Track saving state to prevent race conditions
   const isSavingRef = useRef(false)
   const lastSavedContentRef = useRef('')
   const saveStatusTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Generate a unique key that forces complete remount on changes
+  const editorKey = useMemo(() => {
+    return `editor-${editorMode}-${selectedFile || 'none'}-${editorInstanceId}`
+  }, [editorMode, selectedFile, editorInstanceId])
 
   // Memoize documentId
   const documentId = useMemo(() => selectedFile?.replace(/[^a-zA-Z0-9]/g, '_') || '', [selectedFile])
@@ -127,6 +133,7 @@ export function EditorArea() {
   // Load file content when selected
   useEffect(() => {
     if (selectedFile) {
+      console.log('📂 Loading file:', selectedFile)
       setCurrentFilePath(selectedFile)
       setSaveStatus('saving')
       setIsFileLoaded(false)
@@ -144,6 +151,7 @@ export function EditorArea() {
             lastSavedContentRef.current = content
             setSaveStatus('saved')
             setIsFileLoaded(true)
+            console.log('✅ File loaded successfully')
           } else {
             setContent('')
             setFileContent('')
@@ -197,10 +205,18 @@ export function EditorArea() {
     closeFile()
   }
 
-  // Toggle between collaborative and solo mode
+  // Toggle between collaborative and solo mode with forced remount
   const toggleMode = () => {
+    console.log(`🔄 Switching from ${editorMode} to ${editorMode === 'collaborative' ? 'solo' : 'collaborative'} mode`)
     setEditorMode(prev => prev === 'collaborative' ? 'solo' : 'collaborative')
+    // Force a new editor instance
+    setEditorInstanceId(prev => prev + 1)
   }
+
+  // Force remount when switching files
+  useEffect(() => {
+    setEditorInstanceId(prev => prev + 1)
+  }, [selectedFile])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -342,11 +358,11 @@ export function EditorArea() {
         </div>
       </div>
 
-      {/* Unified Crepe Editor with proper scrolling */}
+      {/* Unified Crepe Editor with proper scrolling and unique key for complete remount */}
       <div className="flex-1 overflow-hidden">
         <div ref={editorRef} className="h-full">
           <UnifiedCrepeEditor
-            key={`unified-${editorMode}-${selectedFile}-${isFileLoaded}`}
+            key={editorKey} // This ensures complete remount on mode/file changes
             documentId={documentId}
             initialContent={fileContent}
             onChange={handleEditorChange}
