@@ -1,0 +1,615 @@
+/* src/components/editor/styles/editor-components.css */
+/* UI component styles for toolbar, image blocks, menus, etc. */
+
+/* ========================================
+   GENERAL SVG ICON FIXES FOR DARK MODE
+   ======================================== */
+
+/* Ensure all SVG icons inherit color properly */
+.editor-container svg {
+  color: currentColor;
+  fill: currentColor;
+}
+
+.editor-container svg path {
+  fill: currentColor;
+}
+
+/* Milkdown icon containers */
+.editor-container .milkdown-icon {
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-container .milkdown-icon svg {
+  color: currentColor;
+  fill: currentColor;
+}
+
+.editor-container .milkdown-icon svg path {
+  fill: currentColor;
+}
+
+/* ========================================
+   TOOLBAR COMPONENTS
+   ======================================== */
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  box-shadow: var(--editor-shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  overflow-x: auto;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 1.5rem;
+  background: hsl(var(--border));
+  margin: 0 0.25rem;
+  flex-shrink: 0;
+}
+
+.toolbar-button {
+  height: 2rem;
+  width: 2rem;
+  padding: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.toolbar-button:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.toolbar-button.active,
+.toolbar-button[data-active="true"],
+.toolbar-button[aria-pressed="true"] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+/* Dark mode for toolbar buttons */
+.dark .toolbar-button.active,
+.dark .toolbar-button[data-active="true"],
+.dark .toolbar-button[aria-pressed="true"] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.toolbar-icon {
+  height: 1rem;
+  width: 1rem;
+  color: currentColor;
+  fill: currentColor;
+}
+
+.toolbar-icon path {
+  fill: currentColor;
+}
+
+/* ========================================
+   DROPDOWN MENUS & POPUPS - FIXED SCROLLING
+   ======================================== */
+
+.editor-container .milkdown-slash-menu,
+.editor-container [class*="slash-menu"],
+.editor-container [class*="dropdown"],
+.editor-container [class*="menu"] {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  box-shadow: var(--editor-shadow-lg);
+  z-index: 50;
+  /* Removed max-height to fix multiple scrollbars */
+  overflow: visible;
+}
+
+.editor-container .menu-item,
+.editor-container [class*="menu-item"],
+.editor-container .dropdown-item {
+  background: transparent;
+  color: hsl(var(--popover-foreground));
+  padding: 0.5rem 0.75rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.editor-container .menu-item:hover,
+.editor-container [class*="menu-item"]:hover,
+.editor-container .dropdown-item:hover,
+.editor-container .menu-item.hover,
+.editor-container .menu-item.active {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* Dark mode support for menu items */
+.dark .editor-container .menu-item.active,
+.dark .editor-container [class*="menu-item"].active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* ========================================
+   IMAGE BLOCKS
+   ======================================== */
+
+.editor-container .milkdown-image-block {
+  background: var(--editor-bg);
+  border: 2px solid var(--editor-border);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin: 1rem 0;
+  transition: all 0.2s ease;
+}
+
+.editor-container .milkdown-image-block:hover {
+  border-color: var(--editor-primary);
+  box-shadow: 0 0 0 1px var(--editor-primary);
+}
+
+.editor-container .milkdown-image-block.selected {
+  border-color: var(--editor-primary);
+  box-shadow: 0 0 0 2px var(--editor-primary);
+  background: var(--editor-muted);
+}
+
+/* Image edit area */
+.editor-container .milkdown-image-block .image-edit {
+  background: var(--editor-bg);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+}
+
+/* Image icon styling */
+.editor-container .milkdown-image-block .image-icon {
+  color: var(--editor-muted-fg);
+}
+
+.editor-container .milkdown-image-block .image-icon svg {
+  fill: currentColor;
+  color: currentColor;
+}
+
+.editor-container .milkdown-image-block .image-icon svg path {
+  fill: currentColor;
+}
+
+/* Link input area */
+.editor-container .milkdown-image-block .link-input-area {
+  background: var(--editor-bg);
+  color: var(--editor-fg);
+  border: 1px solid var(--editor-border);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  width: 100%;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.editor-container .milkdown-image-block .link-input-area:focus {
+  border-color: var(--editor-primary);
+  box-shadow: 0 0 0 2px var(--editor-primary);
+  outline: none;
+}
+
+/* Placeholder area */
+.editor-container .milkdown-image-block .placeholder {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--editor-muted);
+  border-radius: 0.375rem;
+  border: 2px dashed var(--editor-border);
+}
+
+/* Hide the file input */
+.editor-container .milkdown-image-block .hidden {
+  display: none;
+}
+
+/* Browse Library button - Clean sizing without !important */
+.editor-container .milkdown-image-block .uploader {
+  cursor: pointer;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--editor-primary);
+  color: var(--editor-primary-fg);
+  border: none;
+  border-radius: 0.25rem;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  line-height: 1.2;
+  min-height: auto;
+  height: auto;
+}
+
+.editor-container .milkdown-image-block .uploader:hover {
+  background: var(--editor-accent);
+  color: var(--editor-accent-fg);
+  transform: translateY(-1px);
+  box-shadow: var(--editor-shadow-sm);
+}
+
+.editor-container .milkdown-image-block .uploader:active {
+  transform: translateY(0);
+}
+
+/* Placeholder text */
+.editor-container .milkdown-image-block .text {
+  color: var(--editor-muted-fg);
+  font-size: 0.75rem;
+  flex: 1;
+  line-height: 1.3;
+}
+
+/* Generic image placeholder */
+.editor-container .image-placeholder,
+.editor-container .empty-image-inline {
+  background: var(--editor-muted);
+  color: var(--editor-muted-fg);
+  border: 2px dashed var(--editor-border);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  text-align: center;
+  margin: 0.5rem 0;
+}
+
+/* ========================================
+   LINK TOOLTIPS & PREVIEWS
+   ======================================== */
+
+.editor-container .milkdown-link-preview,
+.editor-container .milkdown-link-edit,
+.editor-container [class*="link-tooltip"],
+.editor-container [class*="link-preview"] {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  box-shadow: var(--editor-shadow-md);
+  padding: 0.5rem;
+  position: fixed;
+  z-index: 50;
+}
+
+/* ========================================
+   BLOCK HANDLES & DRAG CONTROLS - ENHANCED WITH SVG FIXES
+   ======================================== */
+
+.editor-container .milkdown-block-handle,
+.editor-container [class*="block-handle"] {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  box-shadow: var(--editor-shadow-sm);
+  position: fixed;
+  z-index: 40;
+}
+
+.editor-container .operation-item {
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.editor-container .operation-item:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  border-color: hsl(var(--border));
+}
+
+.editor-container .operation-item.active,
+.editor-container .operation-item[data-active="true"],
+.editor-container .operation-item[aria-selected="true"] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+/* SVG Icon styling - this is the key fix */
+.editor-container .operation-item svg {
+  color: currentColor;
+  fill: currentColor;
+  width: 16px;
+  height: 16px;
+}
+
+.editor-container .operation-item svg path {
+  fill: currentColor;
+}
+
+.editor-container .operation-item .milkdown-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.editor-container .operation-item .milkdown-icon svg {
+  color: currentColor;
+  fill: currentColor;
+}
+
+.editor-container .operation-item .milkdown-icon svg path {
+  fill: currentColor;
+}
+
+/* Dark mode specific styles for operation items */
+.dark .editor-container .operation-item {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .editor-container .operation-item:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.dark .editor-container .operation-item.active,
+.dark .editor-container .operation-item[data-active="true"],
+.dark .editor-container .operation-item[aria-selected="true"] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Ensure block handles are visible in dark mode */
+.dark .editor-container .milkdown-block-handle,
+.dark .editor-container [class*="block-handle"] {
+  background: hsl(var(--background));
+  border-color: hsl(var(--border));
+}
+
+/* Force SVG fill in dark mode if needed */
+.dark .editor-container .operation-item svg,
+.dark .editor-container .operation-item svg path {
+  fill: currentColor;
+}
+
+/* ========================================
+   SLASH MENU SPECIFIC STYLING - FIXED SCROLLING
+   ======================================== */
+
+.editor-container .milkdown-slash-menu {
+  position: absolute;
+  z-index: 50;
+  display: block;
+  font-family: var(--font-default, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  color: hsl(var(--foreground));
+  background: hsl(var(--popover));
+  border-radius: 12px;
+  box-shadow: var(--editor-shadow-lg);
+  min-width: 260px;
+  max-width: 320px;
+  max-height: 420px; /* Only set max-height on the main container */
+  overflow: hidden; /* Hide overflow on main container */
+}
+
+.editor-container .milkdown-slash-menu[data-show='false'] {
+  display: none;
+}
+
+/* Tab group styling */
+.editor-container .milkdown-slash-menu .tab-group {
+  border-bottom: none;
+  padding: 12px 12px 8px;
+  margin-bottom: 0;
+  flex-shrink: 0; /* Prevent tabs from shrinking */
+}
+
+.editor-container .milkdown-slash-menu .tab-group ul {
+  list-style-type: none;
+  padding: 8px 10px 0;
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.editor-container .milkdown-slash-menu .tab-group ul li {
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 20px;
+  transition: background-color 0.15s ease;
+}
+
+.editor-container .milkdown-slash-menu .tab-group ul li:hover {
+  background: hsl(var(--accent));
+}
+
+.editor-container .milkdown-slash-menu .tab-group ul li.selected {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Dark mode for tab items */
+.dark .editor-container .milkdown-slash-menu .tab-group ul li.selected {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Menu groups container - THIS is where scrolling should happen */
+.editor-container .milkdown-slash-menu .menu-groups {
+  padding: 0;
+  margin: 0;
+  /* Remove conflicting max-height and let the parent control it */
+  height: auto;
+  max-height: 350px; /* Reasonable max height for menu items */
+  overflow-y: auto; /* Only this container should scroll */
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* Menu group items */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group {
+  padding: 8px 12px 12px;
+  margin: 0;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups .menu-group ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li {
+  min-width: 220px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 10px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li.hover,
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li:hover {
+  background: hsl(var(--accent));
+}
+
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Dark mode for menu group items */
+.dark .editor-container .milkdown-slash-menu .menu-groups .menu-group li.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Menu item icons */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li svg {
+  width: 24px;
+  height: 24px;
+  color: hsl(var(--muted-foreground));
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li svg path {
+  fill: currentColor;
+}
+
+/* Ensure icons change color on hover/active */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li:hover svg,
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li.hover svg,
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li.active svg {
+  color: currentColor;
+  fill: currentColor;
+}
+
+/* Menu item text */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li > span {
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+/* Scrollbar ONLY for the menu groups container */
+.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar {
+  width: 6px;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* ========================================
+   RESPONSIVE DESIGN - FIXED SCROLLING
+   ======================================== */
+
+@media (max-width: 768px) {
+  .editor-toolbar {
+    gap: 0.125rem;
+    padding: 0.375rem;
+  }
+  
+  .toolbar-button {
+    height: 1.75rem;
+    width: 1.75rem;
+  }
+  
+  .toolbar-icon {
+    height: 0.875rem;
+    width: 0.875rem;
+  }
+  
+  .editor-container .milkdown-image-block .placeholder {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .editor-container .milkdown-image-block .uploader {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .editor-container .milkdown-image-block .text {
+    font-size: 0.7rem;
+  }
+  
+  .editor-container .milkdown-slash-menu {
+    min-width: 240px;
+    max-width: 280px;
+    max-height: 350px; /* Smaller on mobile */
+  }
+  
+  .editor-container .milkdown-slash-menu .menu-groups {
+    max-height: 300px; /* Adjust for mobile */
+  }
+  
+  .editor-container .milkdown-slash-menu .menu-groups .menu-group li {
+    min-width: 200px;
+    padding: 12px 8px;
+  }
+}

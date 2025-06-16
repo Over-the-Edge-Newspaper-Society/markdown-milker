@@ -1,4 +1,4 @@
-// src/components/editor/UnifiedCrepeEditor.tsx (Updated with Fixed Toolbar)
+// src/components/editor/UnifiedCrepeEditor.tsx (Refactored - Selective CSS)
 'use client'
 
 import { useRef, useState, useMemo, useEffect, useCallback } from 'react'
@@ -27,13 +27,13 @@ import {
 } from 'lucide-react'
 import { commandsCtx } from '@milkdown/kit/core'
 
-// Import Crepe core styles
+// Only import essential Crepe styles - no theme overrides
 import '@milkdown/crepe/theme/common/style.css'
-import '@milkdown/crepe/theme/frame.css'
-import '@milkdown/crepe/theme/frame-dark.css'
 
-// Import our custom Crepe theme
-import './crepe-editor.css'
+// Import our modular CSS files instead of one large file
+import './styles/editor-base.css'
+import './styles/editor-theme.css'
+import './styles/editor-components.css'
 
 interface UnifiedCrepeEditorProps {
   documentId: string
@@ -44,7 +44,7 @@ interface UnifiedCrepeEditorProps {
   onImageLibraryOpen?: () => void
 }
 
-// Fixed Toolbar Component
+// Fixed Toolbar Component with better styling approach
 function FixedToolbar({ 
   builder, 
   onImageClick 
@@ -131,15 +131,10 @@ function FixedToolbar({
   ]
 
   return (
-    <div className="fixed-toolbar flex items-center gap-1 p-2 bg-background border border-border rounded-lg shadow-md mb-4 sticky top-0 z-20 overflow-x-auto">
+    <div className="editor-toolbar">
       {toolbarItems.map((item, index) => {
         if (item.type === 'divider') {
-          return (
-            <div
-              key={`divider-${index}`}
-              className="w-px h-6 bg-border mx-1 flex-shrink-0"
-            />
-          )
+          return <div key={`divider-${index}`} className="toolbar-divider" />
         }
 
         const Icon = item.icon!
@@ -149,10 +144,10 @@ function FixedToolbar({
             variant="ghost"
             size="sm"
             onClick={() => handleCommand(item.command!)}
-            className="h-8 w-8 p-0 flex-shrink-0"
+            className="toolbar-button"
             title={item.label}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="toolbar-icon" />
           </Button>
         )
       })}
@@ -174,7 +169,7 @@ export function UnifiedCrepeEditor({
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
   const isUnmountingRef = useRef(false)
 
-  // Image management hook with original implementation
+  // Image management hook
   const {
     handleCustomImageUpload,
     createImageSelectHandler,
@@ -204,8 +199,6 @@ export function UnifiedCrepeEditor({
     initialContent,
     collaborative,
     onImageUpload: handleCustomImageUpload,
-    // Disable the default floating toolbar
-    disableToolbar: true
   })
 
   const {
@@ -238,7 +231,7 @@ export function UnifiedCrepeEditor({
     isReady
   })
 
-  // Create the image select handler with all original strategies
+  // Create the image select handler
   const handleImageSelect = useMemo(() => {
     return createImageSelectHandler(builder, getContent, saveContent)
   }, [createImageSelectHandler, builder, getContent, saveContent])
@@ -251,7 +244,7 @@ export function UnifiedCrepeEditor({
     }
   }, [onImageLibraryOpen])
 
-  // Set up image block click interception (maintaining original functionality)
+  // Set up image block click interception
   useEffect(() => {
     if (isUnmountingRef.current) return
     
@@ -259,29 +252,22 @@ export function UnifiedCrepeEditor({
     return cleanup
   }, [setupImageBlockInterception, isReady])
 
-  // Cleanup function that handles proper order
+  // Cleanup function
   const performCleanup = useCallback(() => {
     console.log('🧹 Starting UnifiedCrepeEditor cleanup...')
     isUnmountingRef.current = true
     
-    // Order is important here:
-    // 1. Stop content monitoring first
     cleanupContentSync()
-    
-    // 2. Clean up collaboration (this will disconnect Y.js)
     cleanupCollaboration()
-    
-    // 3. Clean up editor last (this destroys Milkdown contexts)
     cleanupEditor()
     
-    // 4. Reset image management state
     setPendingImageResolve(null)
     setCurrentImageBlock(null)
     
     console.log('✅ UnifiedCrepeEditor cleanup completed')
   }, [cleanupContentSync, cleanupCollaboration, cleanupEditor, setPendingImageResolve, setCurrentImageBlock])
 
-  // Initialize editor with proper error handling
+  // Initialize editor
   useEffect(() => {
     let mounted = true
     
@@ -324,17 +310,16 @@ export function UnifiedCrepeEditor({
     }
   }, [createEditor, collaborative, setupCollaboration, setIsReady, setHasError, setErrorMessage])
 
-  // Cleanup on unmount with proper timing
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Use setTimeout to ensure cleanup happens after all other effects
       setTimeout(() => {
         performCleanup()
       }, 0)
     }
   }, [performCleanup])
 
-  // Public method to open image picker (for external calls)
+  // Public method to open image picker
   const openImagePicker = useCallback(() => {
     if (isUnmountingRef.current) return
     
@@ -344,7 +329,7 @@ export function UnifiedCrepeEditor({
     }
   }, [onImageLibraryOpen])
 
-  // Expose the openImagePicker method to parent components
+  // Expose the openImagePicker method
   useEffect(() => {
     if (containerRef.current && !isUnmountingRef.current) {
       (containerRef.current as any).openImagePicker = openImagePicker
@@ -354,43 +339,7 @@ export function UnifiedCrepeEditor({
   const currentConnectionStatus = collaborative ? connectionStatus : 'solo'
 
   return (
-    <div className="h-full w-full relative bg-background text-foreground transition-colors">
-      {/* Enhanced image block button styling */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .milkdown-image-block .uploader {
-            cursor: pointer !important;
-            pointer-events: auto !important;
-            display: inline-block !important;
-            padding: 4px 8px !important;
-            background: hsl(var(--primary)) !important;
-            color: hsl(var(--primary-foreground)) !important;
-            border-radius: 4px !important;
-            text-decoration: none !important;
-            font-size: 12px !important;
-            transition: background-color 0.2s !important;
-          }
-          .milkdown-image-block .uploader:hover {
-            background: hsl(var(--primary))/90 !important;
-          }
-          .milkdown-image-block .placeholder {
-            pointer-events: auto !important;
-          }
-          .milkdown-image-block .link-input-area {
-            background: hsl(var(--background)) !important;
-            color: hsl(var(--foreground)) !important;
-            border: 1px solid hsl(var(--border)) !important;
-            border-radius: 4px !important;
-            padding: 4px 8px !important;
-          }
-          
-          /* Hide the default floating toolbar */
-          .milkdown-toolbar {
-            display: none !important;
-          }
-        `
-      }} />
-      
+    <div className="unified-crepe-editor">
       <EditorStatusBar
         connectionStatus={currentConnectionStatus}
         collaborators={collaborators}
@@ -405,7 +354,7 @@ export function UnifiedCrepeEditor({
 
       {/* Fixed Toolbar */}
       {isReady && !isUnmountingRef.current && (
-        <div className="px-4 pt-4">
+        <div className="toolbar-container">
           <FixedToolbar 
             builder={builder} 
             onImageClick={handleToolbarImageClick}
@@ -416,16 +365,12 @@ export function UnifiedCrepeEditor({
       {/* Editor Container */}
       <div 
         ref={containerRef}
-        className="h-full w-full crepe-editor-container overflow-auto"
-        style={{ 
-          height: isReady ? 'calc(100% - 112px)' : 'calc(100% - 48px)', // Adjust for toolbar
-          width: '100%',
-          overflowY: 'auto',
-          overflowX: 'hidden'
-        }}
+        className="editor-container"
+        data-collaborative={collaborative}
+        data-ready={isReady}
       />
 
-      {/* Image Picker Dialog - maintaining original functionality */}
+      {/* Image Picker Dialog */}
       {!isUnmountingRef.current && (
         <ImagePicker
           ref={imagePickerRef}
@@ -443,19 +388,19 @@ export function UnifiedCrepeEditor({
       
       {/* Loading overlay */}
       {!isReady && !isUnmountingRef.current && (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-background/80 backdrop-blur-sm transition-colors">
-          <div className="text-center">
-            <div className={`animate-spin w-8 h-8 border-2 ${collaborative ? 'border-green-500 dark:border-green-400' : 'border-blue-500 dark:border-blue-400'} border-t-transparent rounded-full mx-auto mb-3`}></div>
-            <div className="font-medium text-foreground">
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className={`loading-spinner ${collaborative ? 'collaborative' : 'solo'}`}></div>
+            <div className="loading-title">
               Loading {collaborative ? 'Collaborative' : 'Solo'} Editor...
             </div>
-            <div className="text-xs mt-1 text-muted-foreground">
+            <div className="loading-description">
               {collaborative 
                 ? 'Full Crepe features with real-time collaboration' 
                 : 'Full Crepe features for single-user editing'
               }
             </div>
-            <div className={`text-xs ${collaborative ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'} mt-1`}>
+            <div className="loading-features">
               ✅ Unified Crepe editor • Auto-save {collaborative ? '1s' : '1.5s'} • 📸 Asset management
             </div>
           </div>

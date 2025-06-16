@@ -1,0 +1,295 @@
+/* src/components/editor/styles/editor-theme.css */
+/* Theme colors and styling - uses CSS custom properties for clean overrides */
+
+/* Light theme (default) */
+.unified-crepe-editor {
+  /* Core theme variables */
+  --editor-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --editor-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --editor-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark theme adjustments */
+.dark .unified-crepe-editor {
+  --editor-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --editor-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --editor-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* Typography Elements */
+.editor-container .milkdown .editor p {
+  margin: 0.5rem 0;
+  color: var(--editor-fg);
+}
+
+.editor-container .milkdown .editor h1,
+.editor-container .milkdown .editor h2,
+.editor-container .milkdown .editor h3,
+.editor-container .milkdown .editor h4,
+.editor-container .milkdown .editor h5,
+.editor-container .milkdown .editor h6 {
+  color: var(--editor-fg);
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.editor-container .milkdown .editor ul,
+.editor-container .milkdown .editor ol {
+  list-style-position: inside;
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.editor-container .milkdown .editor blockquote {
+  border-left: 4px solid var(--editor-border);
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  font-style: italic;
+  background: var(--editor-muted);
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+}
+
+/* Code Blocks & Syntax Highlighting */
+.editor-container .milkdown .editor code {
+  background: var(--editor-muted);
+  color: var(--editor-primary);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.editor-container .milkdown .editor pre {
+  background: var(--editor-muted);
+  color: var(--editor-fg);
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--editor-border);
+}
+
+.editor-container .milkdown .editor pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+/* CodeMirror styling */
+.editor-container .milkdown-code-block,
+.editor-container [class*="code-block"] {
+  background: var(--editor-muted);
+  border: 1px solid var(--editor-border);
+  border-radius: 0.375rem;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.editor-container .cm-editor {
+  background: var(--editor-muted);
+  color: var(--editor-fg);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.editor-container .cm-content {
+  background: var(--editor-muted);
+  color: var(--editor-fg);
+}
+
+.editor-container .cm-focused {
+  outline: 2px solid var(--editor-primary);
+  outline-offset: 2px;
+}
+
+.editor-container .cm-gutter {
+  background: var(--editor-muted);
+  color: var(--editor-muted-fg);
+  border-right: 1px solid var(--editor-border);
+}
+
+/* Tables */
+.editor-container .milkdown .editor table {
+  border-collapse: collapse;
+  border: 1px solid var(--editor-border);
+  margin: 1rem 0;
+  width: 100%;
+  background: var(--editor-bg);
+}
+
+.editor-container .milkdown .editor th,
+.editor-container .milkdown .editor td {
+  border: 1px solid var(--editor-border);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.editor-container .milkdown .editor th {
+  background: var(--editor-muted);
+  font-weight: 600;
+  color: var(--editor-fg);
+}
+
+.editor-container .milkdown .editor td {
+  background: var(--editor-bg);
+  color: var(--editor-fg);
+}
+
+/* Form Inputs & Buttons */
+.editor-container input,
+.editor-container textarea,
+.editor-container select {
+  background: var(--editor-bg);
+  color: var(--editor-fg);
+  border: 1px solid var(--editor-border);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.editor-container input:focus,
+.editor-container textarea:focus,
+.editor-container select:focus {
+  outline: none;
+  border-color: var(--editor-primary);
+  box-shadow: 0 0 0 2px var(--editor-primary);
+}
+
+.editor-container button {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid var(--editor-border);
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.editor-container button:hover {
+  background: var(--editor-accent);
+  color: var(--editor-accent-fg);
+}
+
+.editor-container button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Scrollbars */
+.editor-container ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.editor-container ::-webkit-scrollbar-track {
+  background: var(--editor-muted);
+  border-radius: 4px;
+}
+
+.editor-container ::-webkit-scrollbar-thumb {
+  background: var(--editor-muted-fg);
+  border-radius: 4px;
+  border: 2px solid var(--editor-muted);
+}
+
+.editor-container ::-webkit-scrollbar-thumb:hover {
+  background: var(--editor-fg);
+}
+
+/* Firefox scrollbar */
+.editor-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--editor-muted-fg) var(--editor-muted);
+}
+
+/* Drop cursor */
+.editor-container .crepe-drop-cursor {
+  background: var(--editor-primary);
+}
+
+/* Selection indicator for nodes */
+.editor-container .ProseMirror-selectednode {
+  background: var(--editor-accent);
+  outline: 2px solid var(--editor-primary);
+  border-radius: 0.25rem;
+}
+
+/* Special content types */
+.editor-container .milkdown-latex-inline-edit,
+.editor-container [class*="latex"],
+.editor-container [class*="math"] {
+  background: var(--editor-muted);
+  color: var(--editor-primary);
+  border: 1px solid var(--editor-border);
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* List items */
+.editor-container .milkdown-list-item-block .label-wrapper {
+  color: var(--editor-muted-fg);
+}
+
+/* Cursor/Insertion Point Visibility */
+.editor-container .ProseMirror .ProseMirror-cursor {
+  border-left: 1px solid var(--editor-fg);
+  margin-left: -1px;
+  margin-right: -1px;
+  position: relative;
+  display: block;
+}
+
+.editor-container .ProseMirror:focus .ProseMirror-cursor {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Ensure cursor is visible */
+.editor-container .milkdown .editor {
+  caret-color: var(--editor-fg);
+}
+
+.editor-container .milkdown .editor:focus {
+  caret-color: var(--editor-primary);
+}
+
+/* Operation items - including dark mode support */
+.editor-container .operation-item {
+  background: transparent;
+  color: var(--editor-muted-fg);
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.editor-container .operation-item:hover {
+  background: var(--editor-accent);
+  color: var(--editor-accent-fg);
+}
+
+.editor-container .operation-item.active,
+.editor-container .operation-item[data-active="true"] {
+  background: var(--editor-primary);
+  color: var(--editor-primary-fg);
+}
+
+/* Dark mode specific adjustments */
+.dark .editor-container .operation-item.active,
+.dark .editor-container .operation-item[data-active="true"] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.dark .editor-container .operation-item:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}

@@ -1,0 +1,197 @@
+/* src/components/editor/styles/editor-base.css */
+/* Base layout and structure for the Crepe editor - no !important needed */
+
+.unified-crepe-editor {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  transition: background-color 0.2s ease, color 0.2s ease;
+  
+  /* CSS Custom Properties for theming */
+  --editor-bg: hsl(var(--background));
+  --editor-fg: hsl(var(--foreground));
+  --editor-border: hsl(var(--border));
+  --editor-muted: hsl(var(--muted));
+  --editor-muted-fg: hsl(var(--muted-foreground));
+  --editor-accent: hsl(var(--accent));
+  --editor-accent-fg: hsl(var(--accent-foreground));
+  --editor-primary: hsl(var(--primary));
+  --editor-primary-fg: hsl(var(--primary-foreground));
+}
+
+/* Toolbar Container */
+.toolbar-container {
+  padding: 1rem;
+  padding-bottom: 0;
+  flex-shrink: 0;
+}
+
+/* Editor Container - Main content area */
+.editor-container {
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Ensure proper height calculation */
+.unified-crepe-editor[data-ready="true"] .editor-container {
+  height: calc(100% - 112px); /* Account for status bar + toolbar */
+}
+
+.unified-crepe-editor[data-ready="false"] .editor-container {
+  height: calc(100% - 48px); /* Account for status bar only */
+}
+
+/* Core Milkdown/Crepe container */
+.editor-container .milkdown {
+  height: 100%;
+  width: 100%;
+  background: var(--editor-bg);
+  color: var(--editor-fg);
+  border: none;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  
+  /* CRITICAL: Enable scrolling */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Editor content area */
+.editor-container .milkdown .editor {
+  background: var(--editor-bg);
+  color: var(--editor-fg);
+  min-height: calc(100vh - 200px);
+  max-height: none;
+  height: auto;
+  outline: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  padding-bottom: 200px; /* Extra space for easier editing */
+  
+  /* Allow natural content flow */
+  overflow: visible;
+  width: 100%;
+}
+
+/* ProseMirror specific */
+.editor-container .ProseMirror {
+  outline: none;
+  min-height: calc(100vh - 250px);
+  height: auto;
+  overflow: visible;
+  padding-bottom: 200px;
+}
+
+/* Selection styles */
+.editor-container .milkdown .editor ::selection {
+  background: var(--editor-accent);
+  color: var(--editor-accent-fg);
+}
+
+/* Placeholder text */
+.editor-container .milkdown .editor .placeholder,
+.editor-container .crepe-placeholder::before {
+  color: var(--editor-muted-fg);
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--background) / 0.8);
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+  z-index: 50;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid transparent;
+  border-top-color: hsl(var(--primary));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 0.75rem;
+}
+
+.loading-spinner.collaborative {
+  border-top-color: hsl(var(--destructive));
+}
+
+.loading-title {
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  margin-bottom: 0.25rem;
+}
+
+.loading-description {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 0.25rem;
+}
+
+.loading-features {
+  font-size: 0.75rem;
+  color: hsl(var(--primary));
+  margin-top: 0.25rem;
+}
+
+.loading-features.collaborative {
+  color: hsl(var(--destructive));
+}
+
+/* Animations */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .editor-container .milkdown {
+    padding: 0.5rem;
+  }
+  
+  .editor-container .milkdown .editor {
+    min-height: calc(100vh - 200px);
+    padding-bottom: 100px;
+  }
+  
+  .editor-container .ProseMirror {
+    min-height: calc(100vh - 200px);
+    padding-bottom: 100px;
+  }
+  
+  .toolbar-container {
+    padding: 0.5rem;
+    padding-bottom: 0;
+  }
+}
+
+/* Ensure smooth theme transitions */
+.unified-crepe-editor * {
+  transition-property: background-color, border-color, color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Hide default Milkdown toolbar if it appears */
+.editor-container .milkdown-toolbar,
+.editor-container [class*="toolbar"][class*="milkdown"] {
+  display: none;
+}

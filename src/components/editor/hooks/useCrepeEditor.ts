@@ -1,4 +1,4 @@
-// src/components/editor/hooks/useCrepeEditor.ts
+// src/components/editor/hooks/useCrepeEditor.ts (Updated - Minimal CSS)
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
@@ -48,8 +48,9 @@ export function useCrepeEditor({
     try {
       console.log(`🎯 Creating ${collaborative ? 'collaborative' : 'solo'} Crepe editor...`)
       
-      // Clear container
+      // Clear container and add CSS class for styling
       containerRef.current.innerHTML = ''
+      containerRef.current.classList.add('crepe-container')
       
       const builder = new CrepeBuilder({
         root: containerRef.current,
@@ -62,14 +63,17 @@ export function useCrepeEditor({
         builder.editor.use(collab)
       }
 
-      // Add features
+      // Add features with minimal configuration
       builder.addFeature(cursor, { 
-        color: collaborative ? '#3b82f6' : '#6b7280', 
+        color: collaborative ? '#3b82f6' : '#1f2937', 
         width: 2, 
-        virtual: true 
+        virtual: false // Make sure cursor is actually visible
       })
+      
       builder.addFeature(listItem, {})
+      
       builder.addFeature(linkTooltip, {})
+      
       builder.addFeature(imageBlock, {
         onUpload: onImageUpload,
         blockUploadPlaceholderText: 'Paste image URL or click to browse library',
@@ -77,12 +81,19 @@ export function useCrepeEditor({
         inlineUploadPlaceholderText: 'Paste image URL or click to browse',
         inlineUploadButton: 'Browse',
       })
+      
       builder.addFeature(blockEdit, {})
+      
       builder.addFeature(placeholder, { 
         text: collaborative ? 'Start collaborating...' : 'Start writing...', 
         mode: 'block' 
       })
-      builder.addFeature(toolbar, {})
+      
+      // Disable the default floating toolbar since we have our own
+      builder.addFeature(toolbar, { 
+        enabled: false 
+      })
+      
       builder.addFeature(codeMirror, {})
       builder.addFeature(table, {})
       builder.addFeature(latex, {})
@@ -102,6 +113,12 @@ export function useCrepeEditor({
       }
       
       builderRef.current = builder
+      
+      // Apply custom CSS class to the editor for our theming
+      const milkdownEl = containerRef.current.querySelector('.milkdown')
+      if (milkdownEl) {
+        milkdownEl.classList.add('custom-themed')
+      }
       
       if (!collaborative) {
         setIsReady(true)
@@ -169,6 +186,7 @@ export function useCrepeEditor({
     if (containerRef.current) {
       try {
         containerRef.current.innerHTML = ''
+        containerRef.current.classList.remove('crepe-container')
       } catch (error) {
         console.error('⚠️ Error clearing container:', error)
       }
