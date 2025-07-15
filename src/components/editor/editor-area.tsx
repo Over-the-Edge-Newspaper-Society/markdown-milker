@@ -22,7 +22,7 @@ export function EditorArea() {
   } = useEditorStore()
   const { selectedFile, closeFile } = useFileStore()
   const [fileContent, setFileContent] = useState('')
-  const [editorMode, setEditorMode] = useState<EditorMode>('collaborative')
+  const [editorMode, setEditorMode] = useState<EditorMode>('solo')
   const [isFileLoaded, setIsFileLoaded] = useState(false)
   const [totalSaves, setTotalSaves] = useState(0)
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
@@ -213,9 +213,16 @@ export function EditorArea() {
     setEditorInstanceId(prev => prev + 1)
   }
 
-  // Force remount when switching files
+  // Force remount when switching files with delay to ensure proper cleanup
   useEffect(() => {
-    setEditorInstanceId(prev => prev + 1)
+    if (selectedFile) {
+      // Add small delay to ensure previous editor is fully cleaned up
+      const timer = setTimeout(() => {
+        setEditorInstanceId(prev => prev + 1)
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }
   }, [selectedFile])
 
   // Cleanup timeout on unmount

@@ -44,82 +44,121 @@ interface UnifiedCrepeEditorProps {
   onImageLibraryOpen?: () => void
 }
 
-// Fixed Toolbar Component with better styling approach
-function FixedToolbar({ 
-  builder, 
-  onImageClick 
-}: { 
+interface FixedToolbarProps {
   builder: any
-  onImageClick: () => void 
-}) {
-  const handleCommand = useCallback((command: string) => {
-    if (!builder) return
+  onImageClick: () => void
+}
+
+// Updated command mapping for Milkdown
+const COMMAND_MAP = {
+  bold: 'ToggleStrongCommand',
+  italic: 'ToggleEmphasisCommand', 
+  strikethrough: 'ToggleStrikethroughCommand',
+  code: 'ToggleInlineCodeCommand',
+  link: 'ToggleLinkCommand',
+  bulletList: 'WrapInBulletListCommand',
+  orderedList: 'WrapInOrderedListCommand',
+  blockquote: 'WrapInBlockquoteCommand',
+  h1: 'TurnIntoHeadingCommand',
+  h2: 'TurnIntoHeadingCommand',
+  h3: 'TurnIntoHeadingCommand',
+  hr: 'InsertHrCommand',
+  table: 'InsertTableCommand'
+}
+
+// Fixed Toolbar Component with proper commands and icon styling
+function FixedToolbar({ builder, onImageClick }: FixedToolbarProps) {
+  const handleCommand = useCallback((command: string, payload?: any) => {
+    if (!builder?.editor) {
+      console.warn('Builder or editor not available')
+      return
+    }
     
     try {
       builder.editor.action((ctx: any) => {
         const commands = ctx.get(commandsCtx)
+        const commandName = COMMAND_MAP[command as keyof typeof COMMAND_MAP]
         
-        switch (command) {
-          case 'bold':
-            commands.call('ToggleStrong')
-            break
-          case 'italic':
-            commands.call('ToggleEmphasis')
-            break
-          case 'strikethrough':
-            commands.call('ToggleStrikethrough')
-            break
-          case 'code':
-            commands.call('ToggleInlineCode')
-            break
-          case 'link':
-            commands.call('ToggleLink')
-            break
-          case 'bulletList':
-            commands.call('WrapInBulletList')
-            break
-          case 'orderedList':
-            commands.call('WrapInOrderedList')
-            break
-          case 'blockquote':
-            commands.call('WrapInBlockquote')
-            break
-          case 'h1':
-            commands.call('TurnIntoHeading', { level: 1 })
-            break
-          case 'h2':
-            commands.call('TurnIntoHeading', { level: 2 })
-            break
-          case 'h3':
-            commands.call('TurnIntoHeading', { level: 3 })
-            break
-          case 'hr':
-            commands.call('InsertHr')
-            break
-          case 'table':
-            commands.call('InsertTable')
-            break
-          case 'image':
-            onImageClick()
-            break
+        if (!commandName) {
+          console.warn('Unknown command:', command)
+          return
+        }
+        
+        console.log('Executing command:', commandName, payload)
+        
+        if (payload) {
+          commands.call(commandName, payload)
+        } else {
+          commands.call(commandName)
         }
       })
     } catch (error) {
-      console.warn('Command failed:', command, error)
+      console.warn('Command execution failed:', command, error)
+      
+      // Fallback: try alternative command names
+      try {
+        builder.editor.action((ctx: any) => {
+          const commands = ctx.get(commandsCtx)
+          
+          switch (command) {
+            case 'bold':
+              commands.call('ToggleStrong')
+              break
+            case 'italic':
+              commands.call('ToggleEmphasis')
+              break
+            case 'strikethrough':
+              commands.call('ToggleStrikethrough')
+              break
+            case 'code':
+              commands.call('ToggleInlineCode')
+              break
+            case 'link':
+              commands.call('ToggleLink')
+              break
+            case 'bulletList':
+              commands.call('WrapInBulletList')
+              break
+            case 'orderedList':
+              commands.call('WrapInOrderedList')
+              break
+            case 'blockquote':
+              commands.call('WrapInBlockquote')
+              break
+            case 'h1':
+              commands.call('TurnIntoHeading', { level: 1 })
+              break
+            case 'h2':
+              commands.call('TurnIntoHeading', { level: 2 })
+              break
+            case 'h3':
+              commands.call('TurnIntoHeading', { level: 3 })
+              break
+            case 'hr':
+              commands.call('InsertHr')
+              break
+            case 'table':
+              commands.call('InsertTable')
+              break
+          }
+        })
+      } catch (fallbackError) {
+        console.warn('Fallback command also failed:', command, fallbackError)
+      }
     }
-  }, [builder, onImageClick])
+  }, [builder])
 
   const toolbarItems = [
-    { icon: Bold, command: 'bold', label: 'Bold' },
-    { icon: Italic, command: 'italic', label: 'Italic' },
+    { icon: Bold, command: 'bold', label: 'Bold (Ctrl+B)' },
+    { icon: Italic, command: 'italic', label: 'Italic (Ctrl+I)' },
     { icon: Strikethrough, command: 'strikethrough', label: 'Strikethrough' },
     { type: 'divider' },
-    { icon: Heading1, command: 'h1', label: 'Heading 1' },
-    { icon: Heading2, command: 'h2', label: 'Heading 2' },
-    { icon: Heading3, command: 'h3', label: 'Heading 3' },
+    { icon: Heading1, command: 'h1', label: 'Heading 1', payload: { level: 1 } },
+    { icon: Heading2, command: 'h2', label: 'Heading 2', payload: { level: 2 } },
+    { icon: Heading3, command: 'h3', label: 'Heading 3', payload: { level: 3 } },
     { type: 'divider' },
     { icon: Code, command: 'code', label: 'Inline Code' },
-    { icon: Link, command: 'link', label: 'Link' },
+    { icon: Link, command: 'link', label: 'Link (Ctrl+K)' },
     { type: 'divider' },
     { icon: List, command: 'bulletList', label: 'Bullet List' },
     { icon: ListOrdered, command: 'orderedList', label: 'Numbered List' },
@@ -131,7 +170,7 @@ function FixedToolbar({
   ]
 
   return (
-    <div className="editor-toolbar">
+    <div className="fixed-toolbar">
       {toolbarItems.map((item, index) => {
         if (item.type === 'divider') {
           return <div key={`divider-${index}`} className="toolbar-divider" />
@@ -143,11 +182,17 @@ function FixedToolbar({
             key={item.command}
             variant="ghost"
             size="sm"
-            onClick={() => handleCommand(item.command!)}
+            onClick={() => {
+              if (item.command === 'image') {
+                onImageClick()
+              } else {
+                handleCommand(item.command!, item.payload)
+              }
+            }}
             className="toolbar-button"
             title={item.label}
           >
-            <Icon className="toolbar-icon" />
+            <Icon className="toolbar-icon" strokeWidth={1.5} />
           </Button>
         )
       })}

@@ -7,7 +7,7 @@ import { EditorArea } from '../editor/editor-area'
 import { ThemeToggle } from '../theme/theme-toggle'
 import { ImagePicker } from '../editor/image-picker'
 import { useTheme } from '../theme/theme-provider'
-import { FileText, Users, Zap, FolderTree, Images } from 'lucide-react'
+import { FileText, Zap, Images } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function MainLayout() {
@@ -49,31 +49,6 @@ export function MainLayout() {
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-4 text-sm text-muted-foreground">
-            {/* File Tree Feature */}
-            <div className="flex items-center gap-1 border rounded-md px-2 py-1">
-              <FolderTree className="h-3 w-3 text-blue-500" />
-              <span className="text-xs">Drag & Drop</span>
-            </div>
-            
-            {/* Asset Management Feature */}
-            <div className="flex items-center gap-1 border rounded-md px-2 py-1">
-              <Images className="h-3 w-3 text-green-500" />
-              <span className="text-xs">Asset Library</span>
-            </div>
-            
-            {/* Status */}
-            <div className="flex items-center gap-2 border rounded-md px-2 py-1">
-              <div className={`w-2 h-2 rounded-full ${actualTheme === 'dark' ? 'bg-purple-500' : 'bg-blue-500'}`} />
-              <span>Ready</span>
-              <span className="text-xs opacity-75">• {actualTheme} mode</span>
-            </div>
-          </div>
-          
-          <div className="hidden sm:flex items-center gap-2 text-sm">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Collaborative</span>
-          </div>
 
           {/* Image Library Button */}
           <Button 

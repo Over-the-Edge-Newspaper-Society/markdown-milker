@@ -18,6 +18,7 @@ export function useContentSync({ getContent, onChange, collaborative, isReady }:
   const saveContent = useCallback(async (content: string, context: string = 'auto'): Promise<boolean> => {
     if (isSavingRef.current || !onChange) return false
     
+    // Basic content cleaning without table-specific modifications
     let cleanedContent = content
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<[^>]*>/g, '')

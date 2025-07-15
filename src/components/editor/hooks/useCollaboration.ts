@@ -72,8 +72,9 @@ export function useCollaboration({ documentId, wsUrl, initialContent }: UseColla
 
       const handleConnectionError = (error: any) => {
         if (isCleaningUpRef.current) return
-        console.error('📡 WebSocket connection error:', error)
+        console.warn('📡 WebSocket connection failed. Running in offline mode.')
         setConnectionStatus('error')
+        // Don't log the full error object to reduce console noise
       }
 
       const handleAwarenessChange = () => {
@@ -105,6 +106,8 @@ export function useCollaboration({ documentId, wsUrl, initialContent }: UseColla
 
               if (isSynced) {
                 try {
+                  // Add delay to ensure editor is fully initialized
+                  await new Promise(resolve => setTimeout(resolve, 100))
                   await collabService.connect()
                   
                   // Apply initial content if needed and we're the first/only user
@@ -176,8 +179,12 @@ export function useCollaboration({ documentId, wsUrl, initialContent }: UseColla
         providerRef.current.disconnect()
         
         // Remove all event listeners to prevent further updates
-        providerRef.current.removeAllListeners()
-        providerRef.current.awareness.removeAllListeners()
+        if (typeof providerRef.current.removeAllListeners === 'function') {
+          providerRef.current.removeAllListeners()
+        }
+        if (providerRef.current.awareness && typeof providerRef.current.awareness.removeAllListeners === 'function') {
+          providerRef.current.awareness.removeAllListeners()
+        }
         
         // Destroy the provider
         providerRef.current.destroy()

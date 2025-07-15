@@ -390,9 +390,9 @@
   align-items: center !important;
   gap: 0.25rem !important;
   padding: 0.25rem 0.5rem !important; /* Smaller padding */
-  background-color: var(--crepe-primary) !important;
-  color: var(--crepe-primary-fg) !important;
-  border: none !important;
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
   border-radius: 0.25rem !important; /* Smaller border radius */
   text-decoration: none !important;
   font-size: 0.75rem !important; /* Smaller font size */
@@ -405,10 +405,24 @@
 }
 
 .crepe-editor-container .milkdown-image-block .uploader:hover {
-  background-color: var(--crepe-accent) !important;
-  color: var(--crepe-accent-fg) !important;
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  border-color: hsl(var(--accent)) !important;
   transform: translateY(-1px) !important;
   box-shadow: var(--crepe-shadow-sm) !important;
+}
+
+/* Dark mode specific adjustments for browse library button */
+.dark .crepe-editor-container .milkdown-image-block .uploader {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .crepe-editor-container .milkdown-image-block .uploader:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  border-color: hsl(var(--accent)) !important;
 }
 
 .crepe-editor-container .milkdown-image-block .uploader:active {

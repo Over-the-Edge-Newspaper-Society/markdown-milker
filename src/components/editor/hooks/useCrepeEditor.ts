@@ -52,9 +52,17 @@ export function useCrepeEditor({
       containerRef.current.innerHTML = ''
       containerRef.current.classList.add('crepe-container')
       
+      // Validate and sanitize initial content
+      const sanitizedContent = collaborative ? '' : (initialContent || '').trim()
+      
+      // Log content being set for debugging
+      if (sanitizedContent && sanitizedContent.includes('|')) {
+        console.log('🔍 Setting content with tables:', sanitizedContent.substring(0, 200) + '...')
+      }
+      
       const builder = new CrepeBuilder({
         root: containerRef.current,
-        defaultValue: collaborative ? '' : initialContent
+        defaultValue: sanitizedContent
       })
 
       // Add collaboration plugin BEFORE other features if collaborative mode
@@ -95,7 +103,7 @@ export function useCrepeEditor({
       })
       
       builder.addFeature(codeMirror, {})
-      builder.addFeature(table, {})
+      builder.addFeature(table)
       builder.addFeature(latex, {})
 
       console.log(`🎯 Creating ${collaborative ? 'collaborative' : 'solo'} Crepe editor...`)
