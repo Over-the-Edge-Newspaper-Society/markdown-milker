@@ -53,11 +53,20 @@ export function useCrepeEditor({
       containerRef.current.classList.add('crepe-container')
       
       // Validate and sanitize initial content
-      const sanitizedContent = collaborative ? '' : (initialContent || '').trim()
+      let sanitizedContent = collaborative ? '' : (initialContent || '').trim()
       
-      // Log content being set for debugging
+      // Additional table validation - ensure proper table structure
       if (sanitizedContent && sanitizedContent.includes('|')) {
         console.log('🔍 Setting content with tables:', sanitizedContent.substring(0, 200) + '...')
+        
+        // Fix common table issues
+        sanitizedContent = sanitizedContent
+          // Remove standalone pipes that aren't part of tables
+          .replace(/^\|\s*$/gm, '')
+          // Fix escaped pipes
+          .replace(/\\\|/g, '|')
+          // Ensure table rows have proper structure
+          .replace(/\|\s*\n\s*\|/g, '|\n|')
       }
       
       const builder = new CrepeBuilder({
@@ -98,12 +107,15 @@ export function useCrepeEditor({
       })
       
       // Disable the default floating toolbar since we have our own
-      builder.addFeature(toolbar, { 
-        enabled: false 
-      })
+      // builder.addFeature(toolbar, { 
+      //   enabled: false 
+      // })
       
       builder.addFeature(codeMirror, {})
+      
+      // Use the modern Crepe table feature instead of the deprecated plugin
       builder.addFeature(table)
+      
       builder.addFeature(latex, {})
 
       console.log(`🎯 Creating ${collaborative ? 'collaborative' : 'solo'} Crepe editor...`)
