@@ -34,6 +34,7 @@ import '@milkdown/crepe/theme/common/style.css'
 import './styles/editor-base.css'
 import './styles/editor-theme.css'
 import './styles/editor-components.css'
+import './crepe-editor.css'
 
 interface UnifiedCrepeEditorProps {
   documentId: string

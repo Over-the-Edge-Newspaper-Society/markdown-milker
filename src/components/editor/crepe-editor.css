@@ -882,3 +882,37 @@
     padding: 12px 8px !important;
   }
 }
+
+/* ========================================
+   HORIZONTAL RULE (HR) STYLING - FINAL OVERRIDE
+   ======================================== */
+
+/* Maximum specificity HR styling to override all other CSS */
+hr[contenteditable="false"],
+.ProseMirror hr[contenteditable="false"],
+.milkdown hr[contenteditable="false"],
+.crepe-editor-container hr[contenteditable="false"],
+.crepe-editor-container .milkdown hr[contenteditable="false"],
+.crepe-editor-container .milkdown .ProseMirror hr[contenteditable="false"] {
+  outline: none !important;
+  border: none !important;
+  background-color: color-mix(in srgb, hsl(var(--foreground)), transparent 70%) !important;
+  background-clip: content-box !important;
+  padding: 6px 0 !important;
+  height: 13px !important;
+  position: relative !important;
+  margin: 1rem 0 !important;
+}
+
+/* Selected HR with maximum specificity */
+hr[contenteditable="false"].ProseMirror-selectednode,
+.ProseMirror hr[contenteditable="false"].ProseMirror-selectednode,
+.milkdown hr[contenteditable="false"].ProseMirror-selectednode,
+.crepe-editor-container hr[contenteditable="false"].ProseMirror-selectednode,
+.crepe-editor-container .milkdown hr[contenteditable="false"].ProseMirror-selectednode,
+.crepe-editor-container .milkdown .ProseMirror hr[contenteditable="false"].ProseMirror-selectednode {
+  outline: 2px solid hsl(var(--primary)) !important;
+  background-color: color-mix(in srgb, hsl(var(--primary)), transparent 20%) !important;
+  background-clip: content-box !important;
+}
+
