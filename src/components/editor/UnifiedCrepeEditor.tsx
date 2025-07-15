@@ -53,7 +53,7 @@ interface FixedToolbarProps {
 const COMMAND_MAP = {
   bold: 'ToggleStrongCommand',
   italic: 'ToggleEmphasisCommand', 
-  strikethrough: 'ToggleStrikethroughCommand',
+  strikethrough: 'ToggleStrikethrough',
   code: 'ToggleInlineCodeCommand',
   link: 'ToggleLinkCommand',
   bulletList: 'WrapInBulletListCommand',
@@ -126,13 +126,13 @@ function FixedToolbar({ builder, onImageClick }: FixedToolbarProps) {
               commands.call('WrapInBlockquote')
               break
             case 'h1':
-              commands.call('TurnIntoHeading', { level: 1 })
+              commands.call('WrapInHeading', 1)
               break
             case 'h2':
-              commands.call('TurnIntoHeading', { level: 2 })
+              commands.call('WrapInHeading', 2)
               break
             case 'h3':
-              commands.call('TurnIntoHeading', { level: 3 })
+              commands.call('WrapInHeading', 3)
               break
             case 'hr':
               commands.call('InsertHr')

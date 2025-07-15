@@ -4,6 +4,7 @@
 import { useRef, useState, useCallback } from 'react'
 import { CrepeBuilder } from '@milkdown/crepe/builder'
 import { collab } from '@milkdown/plugin-collab'
+import { gfm } from '@milkdown/preset-gfm'
 import { cursor } from '@milkdown/crepe/feature/cursor'
 import { listItem } from '@milkdown/crepe/feature/list-item'
 import { linkTooltip } from '@milkdown/crepe/feature/link-tooltip'
@@ -55,19 +56,7 @@ export function useCrepeEditor({
       // Validate and sanitize initial content
       let sanitizedContent = collaborative ? '' : (initialContent || '').trim()
       
-      // Additional table validation - ensure proper table structure
-      if (sanitizedContent && sanitizedContent.includes('|')) {
-        console.log('🔍 Setting content with tables:', sanitizedContent.substring(0, 200) + '...')
-        
-        // Fix common table issues
-        sanitizedContent = sanitizedContent
-          // Remove standalone pipes that aren't part of tables
-          .replace(/^\|\s*$/gm, '')
-          // Fix escaped pipes
-          .replace(/\\\|/g, '|')
-          // Ensure table rows have proper structure
-          .replace(/\|\s*\n\s*\|/g, '|\n|')
-      }
+      // Content is already sanitized, no additional table processing needed
       
       const builder = new CrepeBuilder({
         root: containerRef.current,
@@ -79,6 +68,9 @@ export function useCrepeEditor({
         console.log('✅ Adding collaboration plugin to builder')
         builder.editor.use(collab)
       }
+
+      // Add GFM preset for strikethrough and other GitHub Flavored Markdown features
+      builder.editor.use(gfm)
 
       // Add features with minimal configuration
       builder.addFeature(cursor, { 
