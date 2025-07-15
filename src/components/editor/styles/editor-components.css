@@ -646,6 +646,7 @@
   top: 0;
   z-index: 20;
   overflow-x: auto;
+  overflow-y: visible;
 }
 
 /* Toolbar dividers */
@@ -776,23 +777,9 @@
   border-radius: 1px;
 }
 
-/* Tooltip enhancement */
+/* Tooltip enhancement - Remove default tooltip */
 .fixed-toolbar .toolbar-button[title]:hover::before {
-  content: attr(title);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: hsl(var(--popover));
-  color: hsl(var(--popover-foreground));
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  z-index: 50;
-  border: 1px solid hsl(var(--border));
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  margin-bottom: 0.25rem;
+  display: none;
 }
 
 /* Keyboard shortcuts hint */

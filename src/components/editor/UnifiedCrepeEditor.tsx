@@ -68,6 +68,7 @@ const COMMAND_MAP = {
 
 // Fixed Toolbar Component with proper commands and icon styling
 function FixedToolbar({ builder, onImageClick }: FixedToolbarProps) {
+  const [tooltip, setTooltip] = useState<{ text: string; rect: DOMRect } | null>(null)
   const handleCommand = useCallback((command: string, payload?: any) => {
     if (!builder?.editor) {
       console.warn('Builder or editor not available')
@@ -148,6 +149,15 @@ function FixedToolbar({ builder, onImageClick }: FixedToolbarProps) {
     }
   }, [builder])
 
+  const handleMouseEnter = useCallback((event: React.MouseEvent<HTMLButtonElement>, label: string) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setTooltip({ text: label, rect })
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    setTooltip(null)
+  }, [])
+
   const toolbarItems = [
     { icon: Bold, command: 'bold', label: 'Bold (Ctrl+B)' },
     { icon: Italic, command: 'italic', label: 'Italic (Ctrl+I)' },
@@ -170,33 +180,50 @@ function FixedToolbar({ builder, onImageClick }: FixedToolbarProps) {
   ]
 
   return (
-    <div className="fixed-toolbar">
-      {toolbarItems.map((item, index) => {
-        if (item.type === 'divider') {
-          return <div key={`divider-${index}`} className="toolbar-divider" />
-        }
+    <>
+      <div className="fixed-toolbar">
+        {toolbarItems.map((item, index) => {
+          if (item.type === 'divider') {
+            return <div key={`divider-${index}`} className="toolbar-divider" />
+          }
 
-        const Icon = item.icon!
-        return (
-          <Button
-            key={item.command}
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (item.command === 'image') {
-                onImageClick()
-              } else {
-                handleCommand(item.command!, item.payload)
-              }
-            }}
-            className="toolbar-button"
-            title={item.label}
-          >
-            <Icon className="toolbar-icon" strokeWidth={1.5} />
-          </Button>
-        )
-      })}
-    </div>
+          const Icon = item.icon!
+          return (
+            <Button
+              key={item.command}
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (item.command === 'image') {
+                  onImageClick()
+                } else {
+                  handleCommand(item.command!, item.payload)
+                }
+              }}
+              className="toolbar-button"
+              onMouseEnter={(e) => handleMouseEnter(e, item.label)}
+              onMouseLeave={handleMouseLeave}
+            >
+              <Icon className="toolbar-icon" strokeWidth={1.5} />
+            </Button>
+          )
+        })}
+      </div>
+      {tooltip && (
+        <div
+          className="fixed z-[9999] pointer-events-none bg-popover text-popover-foreground px-2 py-1 text-xs rounded border border-border shadow-md"
+          style={{
+            position: 'fixed',
+            top: tooltip.rect.bottom + 4,
+            left: tooltip.rect.left + tooltip.rect.width / 2,
+            transform: 'translateX(-50%)',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {tooltip.text}
+        </div>
+      )}
+    </>
   )
 }
 
