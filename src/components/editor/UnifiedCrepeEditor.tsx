@@ -53,7 +53,7 @@ interface FixedToolbarProps {
 const COMMAND_MAP = {
   bold: 'ToggleStrongCommand',
   italic: 'ToggleEmphasisCommand', 
-  strikethrough: 'ToggleStrikethrough',
+  strikethrough: 'ToggleStrikeThrough',
   code: 'ToggleInlineCodeCommand',
   link: 'ToggleLinkCommand',
   bulletList: 'WrapInBulletListCommand',
@@ -108,7 +108,7 @@ function FixedToolbar({ builder, onImageClick }: FixedToolbarProps) {
               commands.call('ToggleEmphasis')
               break
             case 'strikethrough':
-              commands.call('ToggleStrikethrough')
+              commands.call('ToggleStrikeThrough')
               break
             case 'code':
               commands.call('ToggleInlineCode')
