@@ -5,6 +5,7 @@ import { useRef, useState, useCallback } from 'react'
 import { CrepeBuilder } from '@milkdown/crepe/builder'
 import { collab } from '@milkdown/plugin-collab'
 import { gfm } from '@milkdown/preset-gfm'
+// import { prism, prismConfig } from '@milkdown/plugin-prism'
 import { cursor } from '@milkdown/crepe/feature/cursor'
 import { listItem } from '@milkdown/crepe/feature/list-item'
 import { linkTooltip } from '@milkdown/crepe/feature/link-tooltip'
@@ -15,6 +16,8 @@ import { toolbar } from '@milkdown/crepe/feature/toolbar'
 import { codeMirror } from '@milkdown/crepe/feature/code-mirror'
 import { table } from '@milkdown/crepe/feature/table'
 import { latex } from '@milkdown/crepe/feature/latex'
+
+// Language definitions will be imported dynamically
 
 interface UseCrepeEditorProps {
   containerRef: React.RefObject<HTMLDivElement>

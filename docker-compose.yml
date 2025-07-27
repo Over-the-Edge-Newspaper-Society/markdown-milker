@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  editor:
+    build:
+      context: .
+      dockerfile: Dockerfile.editor
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_DOCS_URL=http://localhost:4321
+      - YJS_SERVER_URL=ws://yjs-server:1234
+    volumes:
+      - ./docs:/app/docs
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - yjs-server
+    
+  docs:
+    build:
+      context: ./over-the-edge-docs-starlight
+      dockerfile: ../Dockerfile.docs
+    ports:
+      - "4321:4321"
+    volumes:
+      - ./docs:/app/src/content/docs
+      - /app/node_modules
+      - /app/dist
+    environment:
+      - NODE_ENV=development
+    
+  yjs-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.yjs
+    ports:
+      - "1234:1234"
+    volumes:
+      - ./docs:/app/documents
+    
+  gateway:
+    build:
+      context: ./services/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - editor
+      - docs
+    environment:
+      - EDITOR_URL=http://editor:3000
+      - DOCS_URL=http://docs:4321
+
+volumes:
+  shared-content:
+    driver: local

@@ -4,8 +4,11 @@
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { useFileStore } from '@/lib/stores/file-store'
 import { UnifiedCrepeEditor } from './UnifiedCrepeEditor'
+import { DocsPreview } from '../preview/DocsPreview'
+import { FrontmatterEditor } from './FrontmatterEditor'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEffect, useCallback, useState, useMemo, useRef } from 'react'
-import { X, FileText, Save, Users, User, Images } from 'lucide-react'
+import { X, FileText, Save, Users, User, Images, Book, Edit3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type EditorMode = 'collaborative' | 'solo'
@@ -22,6 +25,7 @@ export function EditorArea() {
   } = useEditorStore()
   const { selectedFile, closeFile } = useFileStore()
   const [fileContent, setFileContent] = useState('')
+  const [markdownOnly, setMarkdownOnly] = useState('')
   const [editorMode, setEditorMode] = useState<EditorMode>('solo')
   const [isFileLoaded, setIsFileLoaded] = useState(false)
   const [totalSaves, setTotalSaves] = useState(0)
@@ -29,6 +33,7 @@ export function EditorArea() {
   const [isManualSaving, setIsManualSaving] = useState(false)
   const [showSaveStatus, setShowSaveStatus] = useState(false)
   const [editorInstanceId, setEditorInstanceId] = useState(0)
+  const [activeTab, setActiveTab] = useState('editor')
   const editorRef = useRef<HTMLDivElement>(null)
 
   // Track saving state to prevent race conditions
@@ -146,6 +151,17 @@ export function EditorArea() {
         .then(data => {
           if (data.content !== undefined) {
             const content = data.content || ''
+            
+            // Separate frontmatter from markdown
+            const frontmatterRegex = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
+            const match = content.match(frontmatterRegex);
+            
+            if (match) {
+              setMarkdownOnly(match[2] || '');
+            } else {
+              setMarkdownOnly(content);
+            }
+            
             setContent(content)
             setFileContent(content)
             lastSavedContentRef.current = content
@@ -155,6 +171,7 @@ export function EditorArea() {
           } else {
             setContent('')
             setFileContent('')
+            setMarkdownOnly('')
             lastSavedContentRef.current = ''
             setSaveStatus('unsaved')
             setIsFileLoaded(true)
@@ -164,6 +181,7 @@ export function EditorArea() {
           console.error('❌ Failed to load file:', error)
           setContent('')
           setFileContent('')
+          setMarkdownOnly('')
           lastSavedContentRef.current = ''
           setSaveStatus('unsaved')
           setIsFileLoaded(true)
@@ -172,6 +190,7 @@ export function EditorArea() {
       setCurrentFilePath(null)
       setContent('')
       setFileContent('')
+      setMarkdownOnly('')
       lastSavedContentRef.current = ''
       setSaveStatus('saved')
       setIsFileLoaded(false)
@@ -197,6 +216,47 @@ export function EditorArea() {
       await saveToFile(content, `${editorMode}-auto`)
     }
   }, [editorMode, isFileLoaded, selectedFile, setSaveStatus, saveToFile])
+
+  // Handle frontmatter changes
+  const handleFrontmatterChange = useCallback(async (fullContent: string, markdownContent: string) => {
+    if (!isFileLoaded || !selectedFile) {
+      return
+    }
+    
+    // Update local state with the full content (frontmatter + markdown)
+    setFileContent(fullContent)
+    setMarkdownOnly(markdownContent)
+    
+    if (fullContent !== lastSavedContentRef.current) {
+      setSaveStatus('unsaved')
+      await saveToFile(fullContent, 'frontmatter-change')
+    }
+  }, [isFileLoaded, selectedFile, setSaveStatus, saveToFile])
+
+  // Handle markdown editor changes (reconstruct with existing frontmatter)
+  const handleMarkdownChange = useCallback(async (markdownContent: string) => {
+    if (!isFileLoaded || !selectedFile) {
+      return
+    }
+    
+    // Extract frontmatter from current fileContent
+    const frontmatterRegex = /^---\n([\s\S]*?)\n---\n?/;
+    const match = fileContent.match(frontmatterRegex);
+    
+    let fullContent = markdownContent;
+    if (match) {
+      // Preserve existing frontmatter
+      fullContent = `---\n${match[1]}\n---\n${markdownContent}`;
+    }
+    
+    setFileContent(fullContent)
+    setMarkdownOnly(markdownContent)
+    
+    if (fullContent !== lastSavedContentRef.current) {
+      setSaveStatus('unsaved')
+      await saveToFile(fullContent, `${editorMode}-auto`)
+    }
+  }, [editorMode, isFileLoaded, selectedFile, fileContent, setSaveStatus, saveToFile])
 
   const handleClose = async () => {
     if (selectedFile && fileContent && fileContent !== lastSavedContentRef.current) {
@@ -365,18 +425,65 @@ export function EditorArea() {
         </div>
       </div>
 
-      {/* Unified Crepe Editor with proper scrolling and unique key for complete remount */}
-      <div className="flex-1 overflow-hidden">
-        <div ref={editorRef} className="h-full">
-          <UnifiedCrepeEditor
-            key={editorKey} // This ensures complete remount on mode/file changes
-            documentId={documentId}
-            initialContent={fileContent}
-            onChange={handleEditorChange}
-            wsUrl={process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'}
-            collaborative={editorMode === 'collaborative'}
-            onImageLibraryOpen={handleImageLibraryOpen}
-          />
+      {/* Tabbed interface with Editor and Preview */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {/* Custom Tab Headers */}
+        <div className="w-full border-b bg-transparent p-0 flex-shrink-0 h-10 flex items-center">
+          <button
+            onClick={() => setActiveTab('editor')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'editor'
+                ? 'text-foreground border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Edit3 className="h-4 w-4" />
+            Editor
+          </button>
+          <button
+            onClick={() => setActiveTab('preview')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'preview'
+                ? 'text-foreground border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Book className="h-4 w-4" />
+            Docs Preview
+          </button>
+        </div>
+        
+        {/* Tab Content */}
+        <div className="flex-1 overflow-hidden">
+          {activeTab === 'editor' && (
+            <div className="h-full flex flex-col">
+              <FrontmatterEditor
+                content={fileContent}
+                onChange={handleFrontmatterChange}
+              />
+              <div ref={editorRef} className="flex-1 overflow-hidden">
+                <UnifiedCrepeEditor
+                  key={editorKey} // This ensures complete remount on mode/file changes
+                  documentId={documentId}
+                  initialContent={markdownOnly}
+                  onChange={handleMarkdownChange}
+                  wsUrl={process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'}
+                  collaborative={editorMode === 'collaborative'}
+                  onImageLibraryOpen={handleImageLibraryOpen}
+                />
+              </div>
+            </div>
+          )}
+          
+          {activeTab === 'preview' && (
+            <div className="h-full">
+              <DocsPreview 
+                className="w-full h-full" 
+                isFullScreen={true}
+                onClose={() => setActiveTab('editor')}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

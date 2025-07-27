@@ -1,18 +1,27 @@
-// src/components/layout/main-layout.tsx (Updated with Image Library Button)
+// src/components/layout/main-layout.tsx (Updated with GitHub Integration)
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { EnhancedDirectoryTree } from '../file-tree/directory-tree'
 import { EditorArea } from '../editor/editor-area'
 import { ThemeToggle } from '../theme/theme-toggle'
 import { ImagePicker } from '../editor/image-picker'
+import { SettingsModal } from '../settings/SettingsModal'
+import { GitHubSyncButtons } from '../github-sync/GitHubSyncButtons'
 import { useTheme } from '../theme/theme-provider'
-import { FileText, Zap, Images } from 'lucide-react'
+import { SettingsManager } from '@/lib/settings'
+import { FileText, Zap, Images, Settings, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function MainLayout() {
   const { actualTheme } = useTheme()
   const [showImageLibrary, setShowImageLibrary] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [isConfigured, setIsConfigured] = useState(false)
+
+  useEffect(() => {
+    setIsConfigured(SettingsManager.isConfigured())
+  }, [])
 
   const handleImageLibraryToggle = () => {
     setShowImageLibrary(true)
@@ -49,6 +58,23 @@ export function MainLayout() {
         </div>
         
         <div className="flex items-center gap-3">
+          {/* GitHub Integration Alert */}
+          {!isConfigured && (
+            <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-1 text-sm">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <span className="text-yellow-800">GitHub not configured</span>
+              <Button 
+                variant="link" 
+                className="h-auto p-0 text-yellow-600 underline text-sm"
+                onClick={() => setShowSettings(true)}
+              >
+                Setup
+              </Button>
+            </div>
+          )}
+          
+          {/* GitHub Sync Buttons */}
+          {isConfigured && <GitHubSyncButtons />}
 
           {/* Image Library Button */}
           <Button 
@@ -60,6 +86,16 @@ export function MainLayout() {
           >
             <Images className="h-4 w-4" />
             <span className="hidden sm:inline">Library</span>
+          </Button>
+          
+          {/* Settings Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
           </Button>
           
           <ThemeToggle 
@@ -87,6 +123,17 @@ export function MainLayout() {
         trigger={null}
         open={showImageLibrary}
         onOpenChange={setShowImageLibrary}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal 
+        open={showSettings} 
+        onOpenChange={(open) => {
+          setShowSettings(open);
+          if (!open) {
+            setIsConfigured(SettingsManager.isConfigured());
+          }
+        }} 
       />
     </div>
   )

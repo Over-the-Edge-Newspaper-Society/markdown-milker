@@ -1,0 +1,13 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install minimal dependencies for Y.js server
+RUN npm init -y && npm install ws y-websocket yjs
+
+# Copy Y.js server
+COPY server/yjs-websocket-server.js .
+
+EXPOSE 1234
+
+CMD ["node", "yjs-websocket-server.js"]

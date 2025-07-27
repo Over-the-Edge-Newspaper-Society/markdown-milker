@@ -6,6 +6,7 @@ import { useCrepeEditor } from './hooks/useCrepeEditor'
 import { useCollaboration } from './hooks/useCollaboration'
 import { useContentSync } from './hooks/useContentSync'
 import { useImageManagement } from './hooks/useImageManagement'
+import { usePrismCopyFunctionality } from './hooks/usePrismCopyFunctionality'
 import { EditorStatusBar } from './components/EditorStatusBar'
 import { ImagePicker, type ImagePickerRef } from './image-picker'
 import { Button } from '@/components/ui/button'
@@ -30,10 +31,14 @@ import { commandsCtx } from '@milkdown/kit/core'
 // Only import essential Crepe styles - no theme overrides
 import '@milkdown/crepe/theme/common/style.css'
 
+// Import Prism theme for syntax highlighting
+import 'prism-themes/themes/prism-nord.css'
+
 // Import our modular CSS files instead of one large file
 import './styles/editor-base.css'
 import './styles/editor-theme.css'
 import './styles/editor-components.css'
+import './styles/prism-enhancements.css'
 import './crepe-editor.css'
 
 interface UnifiedCrepeEditorProps {
@@ -324,6 +329,9 @@ export function UnifiedCrepeEditor({
     const cleanup = setupImageBlockInterception(containerRef, isReady)
     return cleanup
   }, [setupImageBlockInterception, isReady])
+
+  // Add copy functionality to Prism code blocks
+  usePrismCopyFunctionality()
 
   // Cleanup function
   const performCleanup = useCallback(() => {
