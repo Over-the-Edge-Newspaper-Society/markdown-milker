@@ -27,6 +27,7 @@ export const useGitHubSync = () => {
         body: JSON.stringify({
           token: settings?.github.token,
           repoUrl: settings?.github.repoUrl,
+          branch: settings?.github.branch,
           contentPath: settings?.github.contentPath
         })
       });
@@ -43,7 +44,9 @@ export const useGitHubSync = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               token: settings?.github.token,
-              repoUrl: settings?.github.repoUrl
+              repoUrl: settings?.github.repoUrl,
+              branch: settings?.github.branch,
+              contentPath: settings?.github.contentPath
             })
           });
           
@@ -98,7 +101,7 @@ export const useGitHubSync = () => {
         body: JSON.stringify({ 
           token: settings?.github.token,
           repoUrl: settings?.github.repoUrl,
-          contentPath: settings?.github.contentPath,
+          branch: settings?.github.branch,
           message: commitMessage 
         })
       });

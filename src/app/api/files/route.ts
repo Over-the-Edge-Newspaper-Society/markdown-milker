@@ -4,31 +4,49 @@ import { readFile, writeFile, readdir, mkdir, stat } from 'fs/promises'
 import { join, dirname, extname } from 'path'
 import { existsSync } from 'fs'
 
-const DOCS_PATH = join(process.cwd(), 'docs')
+// Dynamic function to get the docs path based on settings
+function getDocsPath(): string {
+  // Check if we have a cloned repo
+  const repoPath = join(process.cwd(), 'repo')
+  if (existsSync(repoPath)) {
+    // Try to get content path from a temporary file or use default
+    const contentPath = 'src/content/docs' // This should come from settings, but for now use default
+    const fullContentPath = join(repoPath, contentPath)
+    if (existsSync(fullContentPath)) {
+      return fullContentPath
+    }
+    // If content path doesn't exist, return repo root
+    return repoPath
+  }
+  
+  // Fallback to local docs folder
+  return join(process.cwd(), 'docs')
+}
 
 // Ensure docs directory exists
-async function ensureDocsDir() {
-  if (!existsSync(DOCS_PATH)) {
-    await mkdir(DOCS_PATH, { recursive: true })
+async function ensureDocsDir(docsPath: string) {
+  if (!existsSync(docsPath)) {
+    await mkdir(docsPath, { recursive: true })
   }
 }
 
 // Security check to prevent path traversal
-function isSecurePath(requestedPath: string) {
-  const fullPath = join(DOCS_PATH, requestedPath)
-  return fullPath.startsWith(DOCS_PATH)
+function isSecurePath(requestedPath: string, docsPath: string) {
+  const fullPath = join(docsPath, requestedPath)
+  return fullPath.startsWith(docsPath)
 }
 
 // GET - Read file content or list directory
 export async function GET(request: NextRequest) {
-  await ensureDocsDir()
+  const DOCS_PATH = getDocsPath()
+  await ensureDocsDir(DOCS_PATH)
   const { searchParams } = new URL(request.url)
   const path = searchParams.get('path')
 
   try {
     if (path) {
       // Read specific file
-      if (!isSecurePath(path)) {
+      if (!isSecurePath(path, DOCS_PATH)) {
         return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
       }
       
@@ -105,7 +123,8 @@ export async function GET(request: NextRequest) {
 
 // POST - Save file content
 export async function POST(request: NextRequest) {
-  await ensureDocsDir()
+  const DOCS_PATH = getDocsPath()
+  await ensureDocsDir(DOCS_PATH)
   
   try {
     const body = await request.json()
@@ -117,7 +136,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Path is required' }, { status: 400 })
     }
 
-    if (!isSecurePath(path)) {
+    if (!isSecurePath(path, DOCS_PATH)) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
     }
 
@@ -155,13 +174,14 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Delete file or directory
 export async function DELETE(request: NextRequest) {
-  await ensureDocsDir()
+  const DOCS_PATH = getDocsPath()
+  await ensureDocsDir(DOCS_PATH)
   
   try {
     const { searchParams } = new URL(request.url)
     const path = searchParams.get('path')
     
-    if (!path || !isSecurePath(path)) {
+    if (!path || !isSecurePath(path, DOCS_PATH)) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
     }
 

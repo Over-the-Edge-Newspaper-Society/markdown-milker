@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GitHubService } from '@/lib/github-api';
-import fs from 'fs/promises';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { existsSync } from 'fs';
 import path from 'path';
+
+const execAsync = promisify(exec);
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, repoUrl, message, contentPath = 'docs' } = await request.json();
+    const { token, repoUrl, message, branch = 'main' } = await request.json();
     
     if (!token || !repoUrl || !message) {
       return NextResponse.json(
@@ -14,57 +17,82 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const githubService = GitHubService.fromRepoUrl(token, repoUrl);
+    console.log('📤 Starting git push process...');
+    console.log('📦 Repository:', repoUrl);
+    console.log('🌿 Branch:', branch);
+    console.log('💬 Message:', message);
     
-    if (!githubService) {
+    const repoDir = path.join(process.cwd(), 'repo');
+    
+    // Check if repo directory exists
+    if (!existsSync(repoDir)) {
       return NextResponse.json(
-        { error: 'Invalid repository URL format' },
+        { error: 'Repository not found. Please pull from GitHub first to clone the repository.' },
         { status: 400 }
       );
     }
-    
-    // Read all local markdown files
-    const localDocsPath = path.join(process.cwd(), 'docs');
     
     try {
-      await fs.access(localDocsPath);
-    } catch {
+      // Check for changes
+      const statusResult = await execAsync('git status --porcelain', { cwd: repoDir });
+      
+      if (!statusResult.stdout.trim()) {
+        return NextResponse.json({
+          success: true,
+          message: 'No changes to commit',
+          pushedFiles: []
+        });
+      }
+      
+      console.log('📝 Changes detected:', statusResult.stdout);
+      
+      // Add all changes
+      await execAsync('git add .', { cwd: repoDir });
+      console.log('✅ Added changes to staging');
+      
+      // Commit changes
+      await execAsync(`git commit -m "${message}"`, { cwd: repoDir });
+      console.log('✅ Committed changes');
+      
+      // Push changes
+      await execAsync(`git push origin ${branch}`, { cwd: repoDir });
+      console.log('✅ Pushed to GitHub');
+      
+      // Get list of changed files
+      const changedFiles = statusResult.stdout
+        .split('\n')
+        .filter(line => line.trim())
+        .map(line => line.substring(3)) // Remove status indicators
+        .filter(file => file.endsWith('.md'));
+      
+      return NextResponse.json({
+        success: true,
+        message: `Successfully pushed ${changedFiles.length} changes to GitHub`,
+        pushedFiles: changedFiles,
+        branch: branch
+      });
+      
+    } catch (error) {
+      console.error('❌ Git push error:', error);
+      
+      // Check if it's an authentication error
+      if (error instanceof Error && error.message.includes('authentication')) {
+        return NextResponse.json(
+          { error: 'Authentication failed. Please check your GitHub token.' },
+          { status: 401 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: 'No local docs directory found' },
-        { status: 400 }
+        { error: `Failed to push to GitHub: ${error instanceof Error ? error.message : 'Unknown error'}` },
+        { status: 500 }
       );
     }
     
-    const files = await fs.readdir(localDocsPath, { withFileTypes: true });
-    const markdownFiles = files.filter(file => 
-      file.isFile() && file.name.endsWith('.md')
-    );
-    
-    const pushedFiles = [];
-    
-    for (const file of markdownFiles) {
-      try {
-        const localPath = path.join(localDocsPath, file.name);
-        const content = await fs.readFile(localPath, 'utf8');
-        
-        // Push to GitHub using the specified content path
-        const remotePath = contentPath ? `${contentPath}/${file.name}` : file.name;
-        await githubService.updateFile(remotePath, content, message);
-        pushedFiles.push(file.name);
-      } catch (error) {
-        console.error(`Error pushing file ${file.name}:`, error);
-      }
-    }
-    
-    return NextResponse.json({ 
-      success: true, 
-      pushedFiles,
-      message: `Pushed ${pushedFiles.length} files to GitHub`
-    });
   } catch (error) {
-    console.error('GitHub push error:', error);
+    console.error('❌ GitHub push error:', error);
     return NextResponse.json(
-      { error: 'Failed to push to GitHub' },
+      { error: error instanceof Error ? error.message : 'Failed to push to GitHub' },
       { status: 500 }
     );
   }

@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, repoUrl } = await request.json();
+    const { token, repoUrl, branch = 'main', contentPath = '' } = await request.json();
     
     if (!token || !repoUrl) {
       return NextResponse.json(
@@ -18,15 +18,19 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('🚀 Starting docs setup process...');
+    console.log('📦 Repository:', repoUrl);
+    console.log('🌿 Branch:', branch);
+    console.log('📁 Content Path:', contentPath);
     
-    // Parse the repository URL to get the docs repository
-    const docsRepoUrl = repoUrl.replace('.git', '') + '-docs-starlight';
-    const docsDir = path.join(process.cwd(), 'over-the-edge-docs-starlight');
+    // Use the actual repository URL (no modification needed)
+    const docsRepoUrl = repoUrl.replace('.git', '');
+    const docsDir = path.join(process.cwd(), 'repo');
     
     // Check if docs directory already exists
     if (existsSync(docsDir)) {
       console.log('📁 Docs directory exists, pulling latest changes...');
       try {
+        await execAsync(`git checkout ${branch}`, { cwd: docsDir });
         await execAsync('git pull', { cwd: docsDir });
         console.log('✅ Docs updated successfully');
       } catch (pullError) {
@@ -44,7 +48,7 @@ export async function POST(request: NextRequest) {
       const authUrl = docsRepoUrl.replace('https://', `https://${token}@`);
       
       try {
-        await execAsync(`git clone "${authUrl}" "${docsDir}"`);
+        await execAsync(`git clone -b ${branch} "${authUrl}" "${docsDir}"`);
         console.log('✅ Docs repository cloned successfully');
       } catch (cloneError) {
         console.error('❌ Failed to clone docs repository:', cloneError);
@@ -71,7 +75,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Docs setup completed successfully',
-      docsPath: docsDir
+      docsPath: docsDir,
+      contentPath: contentPath,
+      branch: branch
     });
     
   } catch (error) {

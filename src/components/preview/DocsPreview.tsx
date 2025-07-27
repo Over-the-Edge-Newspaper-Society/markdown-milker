@@ -8,23 +8,62 @@ interface DocsPreviewProps {
   className?: string;
   onClose?: () => void;
   isFullScreen?: boolean;
+  currentFilePath?: string;
 }
 
-export const DocsPreview = ({ className, onClose, isFullScreen = false }: DocsPreviewProps) => {
+export const DocsPreview = ({ className, onClose, isFullScreen = false, currentFilePath }: DocsPreviewProps) => {
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [isLoading, setIsLoading] = useState(true);
   const [docsUrl, setDocsUrl] = useState('http://localhost:4321');
 
-  useEffect(() => {
-    // Check if we're running in Docker/production
+  // Function to convert file path to docs URL
+  const getDocsUrlForFile = (filePath: string | undefined): string => {
     const isDevelopment = process.env.NODE_ENV === 'development';
     const baseUrl = isDevelopment ? 'http://localhost:4321' : '/docs-preview';
-    setDocsUrl(baseUrl);
+    
+    if (!filePath) {
+      return baseUrl;
+    }
+    
+    // Convert file path to docs route
+    // Example: "submission-process/email-drafter.md" -> "/submission-process/email-drafter/"
+    let route = filePath
+      .replace(/\.md$/, '') // Remove .md extension
+      .replace(/\/index$/, '') // Remove /index if present
+      .replace(/^src\/content\/docs\//, '') // Remove content path prefix if present
+      .replace(/\\/g, '/'); // Normalize path separators
+    
+    // Special handling for index files
+    if (route === 'index' || route === '') {
+      return baseUrl;
+    }
+    
+    // Ensure route starts with /
+    if (!route.startsWith('/')) {
+      route = '/' + route;
+    }
+    
+    // Ensure route ends with /
+    if (!route.endsWith('/')) {
+      route += '/';
+    }
+    
+    return `${baseUrl}${route}`;
+  };
+
+  useEffect(() => {
+    const url = getDocsUrlForFile(currentFilePath);
+    console.log('📍 DocsPreview URL mapping:', { 
+      currentFilePath, 
+      generatedUrl: url 
+    });
+    setDocsUrl(url);
     
     // Check if docs are available
     const checkDocsAvailability = async () => {
       try {
-        const response = await fetch(baseUrl, { mode: 'no-cors' });
+        const baseCheckUrl = url.split('/').slice(0, 3).join('/'); // Get just the base URL for checking
+        const response = await fetch(baseCheckUrl, { mode: 'no-cors' });
         // If we get here without error, docs are probably available
       } catch (error) {
         console.log('Docs not available yet, may need to run "npm run dev:unified"');
@@ -32,7 +71,7 @@ export const DocsPreview = ({ className, onClose, isFullScreen = false }: DocsPr
     };
     
     checkDocsAvailability();
-  }, []);
+  }, [currentFilePath]); // Re-run when currentFilePath changes
 
   const handleRefresh = () => {
     setIsLoading(true);

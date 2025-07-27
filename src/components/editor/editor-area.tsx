@@ -480,6 +480,7 @@ export function EditorArea() {
               <DocsPreview 
                 className="w-full h-full" 
                 isFullScreen={true}
+                currentFilePath={selectedFile}
                 onClose={() => setActiveTab('editor')}
               />
             </div>
