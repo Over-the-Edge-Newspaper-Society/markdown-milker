@@ -20,6 +20,18 @@ export const DocsPreview = ({ className, onClose, isFullScreen = false }: DocsPr
     const isDevelopment = process.env.NODE_ENV === 'development';
     const baseUrl = isDevelopment ? 'http://localhost:4321' : '/docs-preview';
     setDocsUrl(baseUrl);
+    
+    // Check if docs are available
+    const checkDocsAvailability = async () => {
+      try {
+        const response = await fetch(baseUrl, { mode: 'no-cors' });
+        // If we get here without error, docs are probably available
+      } catch (error) {
+        console.log('Docs not available yet, may need to run "npm run dev:unified"');
+      }
+    };
+    
+    checkDocsAvailability();
   }, []);
 
   const handleRefresh = () => {

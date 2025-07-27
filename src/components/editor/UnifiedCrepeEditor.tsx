@@ -6,7 +6,8 @@ import { useCrepeEditor } from './hooks/useCrepeEditor'
 import { useCollaboration } from './hooks/useCollaboration'
 import { useContentSync } from './hooks/useContentSync'
 import { useImageManagement } from './hooks/useImageManagement'
-import { usePrismCopyFunctionality } from './hooks/usePrismCopyFunctionality'
+import { useCodeBlockCopyFunctionality } from './hooks/useCodeBlockCopyFunctionality'
+import { useCollaborativeCursorEnhancement } from './hooks/useCollaborativeCursorEnhancement'
 import { EditorStatusBar } from './components/EditorStatusBar'
 import { ImagePicker, type ImagePickerRef } from './image-picker'
 import { Button } from '@/components/ui/button'
@@ -38,7 +39,8 @@ import 'prism-themes/themes/prism-nord.css'
 import './styles/editor-base.css'
 import './styles/editor-theme.css'
 import './styles/editor-components.css'
-import './styles/prism-enhancements.css'
+import './styles/code-block-enhancements.css'
+import './styles/collaborative-cursors.css'
 import './crepe-editor.css'
 
 interface UnifiedCrepeEditorProps {
@@ -330,8 +332,11 @@ export function UnifiedCrepeEditor({
     return cleanup
   }, [setupImageBlockInterception, isReady])
 
-  // Add copy functionality to Prism code blocks
-  usePrismCopyFunctionality()
+  // Add copy functionality to code blocks
+  useCodeBlockCopyFunctionality()
+
+  // Enhance collaborative cursors
+  useCollaborativeCursorEnhancement()
 
   // Cleanup function
   const performCleanup = useCallback(() => {

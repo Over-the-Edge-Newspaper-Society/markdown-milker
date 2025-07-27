@@ -19,6 +19,8 @@ export const useGitHubSync = () => {
     setSyncStatus('pulling');
     try {
       const settings = SettingsManager.getSettings();
+      
+      // First, pull the main content
       const response = await fetch('/api/github/pull', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,6 +34,30 @@ export const useGitHubSync = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('Pull successful:', data);
+        
+        // Also setup/update docs
+        try {
+          console.log('🚀 Setting up docs...');
+          const docsResponse = await fetch('/api/github/setup-docs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: settings?.github.token,
+              repoUrl: settings?.github.repoUrl
+            })
+          });
+          
+          if (docsResponse.ok) {
+            const docsData = await docsResponse.json();
+            console.log('📚 Docs setup successful:', docsData);
+            data.docsSetup = docsData;
+          } else {
+            console.warn('⚠️ Docs setup failed, continuing without docs');
+          }
+        } catch (docsError) {
+          console.warn('⚠️ Docs setup error:', docsError);
+          // Continue without docs setup
+        }
         
         // Refresh the file tree by fetching the updated list
         const filesResponse = await fetch('/api/files');

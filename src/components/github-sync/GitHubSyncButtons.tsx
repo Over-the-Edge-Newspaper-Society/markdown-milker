@@ -32,6 +32,8 @@ export const GitHubSyncButtons = () => {
       if (result) {
         if (result.clearedDirectory) {
           setSuccess(result.message || 'Directory cleared and synced');
+        } else if (result.docsSetup) {
+          setSuccess('Pull completed and docs setup successful! Run "npm run dev:unified" to start docs server.');
         } else {
           setSuccess('Pull completed');
         }

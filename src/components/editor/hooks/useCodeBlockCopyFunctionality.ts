@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 
-export function usePrismCopyFunctionality() {
+export function useCodeBlockCopyFunctionality() {
   useEffect(() => {
     const addCopyFunctionality = () => {
-      // Find all Prism code blocks
-      const codeBlocks = document.querySelectorAll('.milkdown pre[class*="language-"]');
+      // Find all code blocks (CodeMirror and regular pre elements)
+      const codeBlocks = document.querySelectorAll('.milkdown .code-block, .milkdown pre');
       
       codeBlocks.forEach((pre) => {
         // Skip if already has copy functionality
@@ -32,10 +32,18 @@ export function usePrismCopyFunctionality() {
             e.preventDefault();
             e.stopPropagation();
             
+            // Try to get text from CodeMirror or regular code element
+            let text = '';
+            const codeMirror = pre.querySelector('.cm-editor .cm-content');
             const code = pre.querySelector('code');
-            if (!code) return;
             
-            const text = code.textContent || '';
+            if (codeMirror) {
+              text = codeMirror.textContent || '';
+            } else if (code) {
+              text = code.textContent || '';
+            } else {
+              text = pre.textContent || '';
+            }
             
             try {
               await navigator.clipboard.writeText(text);
@@ -57,10 +65,18 @@ export function usePrismCopyFunctionality() {
           if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
             e.preventDefault();
             
+            // Try to get text from CodeMirror or regular code element
+            let text = '';
+            const codeMirror = pre.querySelector('.cm-editor .cm-content');
             const code = pre.querySelector('code');
-            if (!code) return;
             
-            const text = code.textContent || '';
+            if (codeMirror) {
+              text = codeMirror.textContent || '';
+            } else if (code) {
+              text = code.textContent || '';
+            } else {
+              text = pre.textContent || '';
+            }
             
             try {
               await navigator.clipboard.writeText(text);
@@ -93,8 +109,8 @@ export function usePrismCopyFunctionality() {
         };
       });
       
-      // Handle mermaid diagrams
-      const mermaidBlocks = document.querySelectorAll('.milkdown pre[class*="language-mermaid"]');
+      // Handle mermaid diagrams (look for mermaid in class or content)
+      const mermaidBlocks = document.querySelectorAll('.milkdown pre');
       mermaidBlocks.forEach(async (pre) => {
         const code = pre.querySelector('code');
         if (!code) return;

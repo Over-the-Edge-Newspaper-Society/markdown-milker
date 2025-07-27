@@ -77,7 +77,7 @@ export function useCrepeEditor({
 
       // Add features with minimal configuration
       builder.addFeature(cursor, { 
-        color: collaborative ? '#3b82f6' : '#1f2937', 
+        color: collaborative ? 'hsl(var(--primary))' : 'hsl(var(--foreground))', 
         width: 2, 
         virtual: false // Make sure cursor is actually visible
       })
@@ -126,6 +126,9 @@ export function useCrepeEditor({
         }
         return null
       }
+      
+      // CodeMirror already provides syntax highlighting for code blocks
+      console.log('✅ Using CodeMirror for syntax highlighting')
       
       builderRef.current = builder
       

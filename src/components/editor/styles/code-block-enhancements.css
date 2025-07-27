@@ -1,7 +1,8 @@
-/* Prism Code Block Enhancements */
+/* CodeMirror Code Block Enhancements */
 
 /* Code block container enhancements */
-.milkdown pre[class*="language-"] {
+.milkdown .code-block,
+.milkdown pre {
   position: relative;
   border-radius: 0.5rem;
   border: 1px solid hsl(var(--border));
@@ -10,9 +11,10 @@
   overflow: visible;
 }
 
-/* Code block header with language and copy button */
-.milkdown pre[class*="language-"]::before {
-  content: attr(data-language);
+/* Code block header with copy button */
+.milkdown .code-block::before,
+.milkdown pre::before {
+  content: "Code";
   position: absolute;
   top: 0;
   left: 0;
@@ -30,7 +32,8 @@
 }
 
 /* Adjust code content positioning */
-.milkdown pre[class*="language-"] code {
+.milkdown .code-block .cm-editor,
+.milkdown pre code {
   display: block;
   padding: 3rem 1rem 1rem 1rem !important;
   background: transparent !important;
@@ -38,15 +41,42 @@
   margin: 0;
 }
 
+/* Fix text selection visibility in code blocks */
+.milkdown .code-block .cm-editor ::selection,
+.milkdown .code-block .cm-content ::selection,
+.milkdown pre code ::selection,
+.milkdown pre ::selection {
+  background: hsl(var(--primary) / 0.3) !important;
+  color: inherit !important;
+}
+
+.milkdown .code-block .cm-editor .cm-selectionBackground,
+.milkdown .code-block .cm-selectionBackground {
+  background: hsl(var(--primary) / 0.3) !important;
+}
+
+/* Ensure CodeMirror selection is visible */
+.milkdown .code-block .cm-editor.cm-focused .cm-selectionBackground {
+  background: hsl(var(--primary) / 0.4) !important;
+}
+
+.milkdown .code-block .cm-editor .cm-line::selection,
+.milkdown .code-block .cm-editor .cm-content ::selection {
+  background: hsl(var(--primary) / 0.3) !important;
+  color: inherit !important;
+}
+
 /* Copy button */
-.milkdown pre[class*="language-"] {
+.milkdown .code-block,
+.milkdown pre {
   --copy-button-bg: hsl(var(--background));
   --copy-button-color: hsl(var(--muted-foreground));
   --copy-button-hover-bg: hsl(var(--accent));
   --copy-button-hover-color: hsl(var(--accent-foreground));
 }
 
-.milkdown pre[class*="language-"]::after {
+.milkdown .code-block::after,
+.milkdown pre::after {
   content: "📋";
   position: absolute;
   top: 0.5rem;
@@ -58,35 +88,32 @@
   font-size: 0.75rem;
   color: var(--copy-button-color);
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.7; /* Always slightly visible */
   transition: opacity 0.2s ease, background-color 0.2s ease;
   user-select: none;
   z-index: 10;
+  pointer-events: auto;
 }
 
-.milkdown pre[class*="language-"]:hover::after {
+.milkdown .code-block:hover::after,
+.milkdown pre:hover::after,
+.milkdown .code-block:focus-within::after,
+.milkdown pre:focus-within::after {
   opacity: 1;
 }
 
-.milkdown pre[class*="language-"]::after:hover {
+.milkdown .code-block::after:hover,
+.milkdown pre::after:hover {
   background: var(--copy-button-hover-bg);
   color: var(--copy-button-hover-color);
+  opacity: 1;
 }
 
-/* Handle different language prefixes */
-.milkdown pre[class*="language-javascript"]::before { content: "JavaScript"; }
-.milkdown pre[class*="language-typescript"]::before { content: "TypeScript"; }
-.milkdown pre[class*="language-jsx"]::before { content: "JSX"; }
-.milkdown pre[class*="language-tsx"]::before { content: "TSX"; }
-.milkdown pre[class*="language-css"]::before { content: "CSS"; }
-.milkdown pre[class*="language-html"]::before { content: "HTML"; }
-.milkdown pre[class*="language-json"]::before { content: "JSON"; }
-.milkdown pre[class*="language-markdown"]::before { content: "Markdown"; }
-.milkdown pre[class*="language-bash"]::before { content: "Bash"; }
-.milkdown pre[class*="language-python"]::before { content: "Python"; }
-.milkdown pre[class*="language-sql"]::before { content: "SQL"; }
-.milkdown pre[class*="language-yaml"]::before { content: "YAML"; }
-.milkdown pre[class*="language-mermaid"]::before { content: "Mermaid"; }
+/* Show copy button when code block is selected/focused */
+.milkdown .code-block[data-copy-enabled]:focus::after,
+.milkdown pre[data-copy-enabled]:focus::after {
+  opacity: 1;
+}
 
 /* Special handling for mermaid */
 .milkdown pre[class*="language-mermaid"] {
