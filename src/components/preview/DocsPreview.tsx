@@ -4,6 +4,13 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, RefreshCw, Monitor, Smartphone, X, ChevronLeft } from 'lucide-react';
 
+// Import shared docs config
+const DOCS_CONFIG = {
+  site: 'https://over-the-edge-newspaper-society.github.io',
+  base: '/over-the-edge-docs/',
+  devPort: 4321
+};
+
 interface DocsPreviewProps {
   className?: string;
   onClose?: () => void;
@@ -19,7 +26,9 @@ export const DocsPreview = ({ className, onClose, isFullScreen = false, currentF
   // Function to convert file path to docs URL
   const getDocsUrlForFile = (filePath: string | undefined): string => {
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const baseUrl = isDevelopment ? 'http://localhost:4321' : '/docs-preview';
+    const baseUrl = isDevelopment 
+      ? `http://localhost:${DOCS_CONFIG.devPort}${DOCS_CONFIG.base.replace(/\/$/, '')}`
+      : DOCS_CONFIG.base.replace(/\/$/, '');
     
     if (!filePath) {
       return baseUrl;
