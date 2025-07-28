@@ -314,8 +314,6 @@
    DROPDOWN MENUS & POPUPS
    ======================================== */
 
-.crepe-editor-container .milkdown-slash-menu,
-.crepe-editor-container [class*="slash-menu"],
 .crepe-editor-container [class*="dropdown"],
 .crepe-editor-container [class*="menu"] {
   background-color: var(--crepe-popover);
@@ -687,217 +685,161 @@
 }
 
 /* ========================================
-   CREPE SLASH MENU FIX - PROPER STRUCTURE
+   SLASH MENU - CLEAN & SIMPLE
    ======================================== */
 
-/* Main slash menu container - Match Crepe structure */
+/* Main slash menu container */
 .crepe-editor-container .milkdown-slash-menu {
-  position: fixed !important;
-  z-index: 9999 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  font-family: var(--crepe-font-default, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
-  color: var(--crepe-color-on-surface, hsl(var(--foreground))) !important;
-  background: var(--crepe-color-surface, hsl(var(--popover))) !important;
-  border-radius: 12px !important;
-  box-shadow: var(--crepe-shadow-1, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)) !important;
-  min-width: 260px !important;
-  max-width: 320px !important;
-  max-height: 420px !important;
-  overflow: hidden !important;
+  position: absolute;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  background: var(--crepe-popover);
+  color: var(--crepe-popover-fg);
+  border: 1px solid var(--crepe-outline);
+  border-radius: 8px;
+  box-shadow: var(--crepe-shadow-lg);
+  min-width: 280px;
+  max-width: min(320px, calc(100vw - 20px));
+  max-height: min(400px, calc(100vh - 40px));
+  overflow: hidden;
 }
 
 .crepe-editor-container .milkdown-slash-menu[data-show='false'] {
-  display: none !important;
+  display: none;
 }
 
-/* Fix overlapping by ensuring proper layout */
-.crepe-editor-container .milkdown-slash-menu * {
-  box-sizing: border-box !important;
+/* Ensure menu groups and items stay within the container */
+.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group,
+.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group ul,
+.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li {
+  position: static !important;
 }
 
-/* Tab group styling - CONNECTED TO MENU */
+
+/* Tab group */
 .crepe-editor-container .milkdown-slash-menu .tab-group {
-  border-bottom: none !important; /* Remove separation */
-  padding: 12px 12px 8px !important;
-  margin-bottom: 0 !important;
+  padding: 8px;
+  border-bottom: 1px solid var(--crepe-outline);
+  flex-shrink: 0;
+  position: relative;
 }
 
 .crepe-editor-container .milkdown-slash-menu .tab-group ul {
-  list-style-type: none !important;
-  padding: 8px 10px 0 !important; /* Remove bottom padding */
-  margin: 0 !important;
-  display: flex !important;
-  gap: 10px !important;
-  flex-wrap: nowrap !important;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 4px;
 }
 
 .crepe-editor-container .milkdown-slash-menu .tab-group ul li {
-  cursor: pointer !important;
-  border-radius: 8px !important;
-  padding: 6px 10px !important;
-  font-size: 14px !important;
-  font-style: normal !important;
-  font-weight: 600 !important;
-  line-height: 20px !important;
-  transition: background-color 0.15s ease !important;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .crepe-editor-container .milkdown-slash-menu .tab-group ul li:hover {
-  background: var(--crepe-color-hover, hsl(var(--accent))) !important;
+  background: var(--crepe-accent);
+  color: var(--crepe-accent-fg);
 }
 
 .crepe-editor-container .milkdown-slash-menu .tab-group ul li.selected {
-  background: var(--crepe-color-selected, hsl(var(--primary))) !important;
-  color: var(--crepe-color-on-selected, hsl(var(--primary-foreground))) !important;
+  background: var(--crepe-primary);
+  color: var(--crepe-primary-fg);
 }
 
-/* Menu groups container - PROPER SCROLLING */
+/* Menu groups container */
 .crepe-editor-container .milkdown-slash-menu .menu-groups {
-  padding: 0 !important;
-  margin: 0 !important;
-  flex: 1 !important;
-  min-height: 0 !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  overscroll-behavior: contain !important;
-  scroll-behavior: smooth !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  flex: 1;
+  min-height: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: block;
+  position: relative;
 }
 
-/* Menu groups - ALL VISIBLE, SCROLLING TOGETHER */
+/* Menu group */
 .crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group {
-  display: block !important;
-  padding: 8px 12px 12px !important;
-  margin: 0 !important;
+  padding: 4px 0;
+  display: block;
+  position: static;
 }
 
-/* Add visual separator between menu groups */
-.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group + .menu-group {
-  border-top: 1px solid hsl(var(--border) / 0.2) !important;
-  padding-top: 12px !important;
-}
-
-/* Menu group headers - CONNECTED SEAMLESSLY */
+/* Menu group headers (hidden) */
 .crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group h6 {
-  display: none !important; /* Hide group headers since tabs show the categories */
+  display: none;
 }
 
-/* Menu group styling - SEAMLESS CONNECTION */
-.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group {
-  padding: 8px 12px 12px !important; /* Connect directly to tabs */
-  margin: 0 !important;
-}
-
-/* Menu group lists - SEAMLESS */
+/* Menu group lists */
 .crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group ul {
-  list-style-type: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: static;
 }
 
 /* Menu items */
 .crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li {
-  min-width: 220px !important;
-  display: flex !important;
-  justify-content: flex-start !important;
-  align-items: center !important;
-  gap: 16px !important;
-  padding: 14px 10px !important;
-  cursor: pointer !important;
-  border-radius: 8px !important;
-  transition: background-color 0.15s ease !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 0 4px;
+  transition: background-color 0.15s ease;
+  min-height: 36px;
+  position: static;
 }
 
-.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li.hover,
-.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li:hover {
-  background: var(--crepe-color-hover, hsl(var(--accent))) !important;
+.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li:hover,
+.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li.hover {
+  background: var(--crepe-accent);
+  color: var(--crepe-accent-fg);
 }
 
 .crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li.active {
-  background: var(--crepe-color-selected, hsl(var(--primary))) !important;
+  background: var(--crepe-primary);
+  color: var(--crepe-primary-fg);
 }
 
 /* Menu item icons */
 .crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li svg {
-  width: 24px !important;
-  height: 24px !important;
-  color: var(--crepe-color-outline, hsl(var(--muted-foreground))) !important;
-  fill: var(--crepe-color-outline, hsl(var(--muted-foreground))) !important;
-  flex-shrink: 0 !important;
+  width: 18px;
+  height: 18px;
+  color: var(--crepe-on-surface-variant);
+  fill: currentColor;
+  flex-shrink: 0;
 }
 
 /* Menu item text */
 .crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li > span {
-  font-size: 14px !important;
-  font-style: normal !important;
-  font-weight: 600 !important;
-  line-height: 20px !important;
-}
-
-/* Visual separators between menu groups */
-.crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group + .menu-group::before {
-  content: '' !important;
-  display: block !important;
-  height: 1px !important;
-  background: color-mix(in srgb, var(--crepe-color-outline, hsl(var(--border))), transparent 80%) !important;
-  margin: 0 10px !important;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 /* Scrollbar styling */
 .crepe-editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar {
-  width: 6px !important;
+  width: 4px;
 }
 
 .crepe-editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-track {
-  background: transparent !important;
+  background: transparent;
 }
 
 .crepe-editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-thumb {
-  background: var(--crepe-color-outline, hsl(var(--border))) !important;
-  border-radius: 3px !important;
+  background: var(--crepe-outline);
+  border-radius: 2px;
 }
 
 .crepe-editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-thumb:hover {
-  background: var(--crepe-color-on-surface-variant, hsl(var(--muted-foreground))) !important;
-}
-
-/* Dark mode support */
-.dark .crepe-editor-container .milkdown-slash-menu {
-  box-shadow: var(--crepe-shadow-1, 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2)) !important;
-}
-
-/* CSS Variables fallbacks for Crepe colors */
-.crepe-editor-container .milkdown-slash-menu {
-  --crepe-color-surface: hsl(var(--popover));
-  --crepe-color-on-surface: hsl(var(--popover-foreground));
-  --crepe-color-outline: hsl(var(--border));
-  --crepe-color-hover: hsl(var(--accent));
-  --crepe-color-selected: hsl(var(--primary));
-  --crepe-shadow-1: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.dark .crepe-editor-container .milkdown-slash-menu {
-  --crepe-shadow-1: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .crepe-editor-container .milkdown-slash-menu {
-    min-width: 240px !important;
-    max-width: 280px !important;
-  }
-  
-  .crepe-editor-container .milkdown-slash-menu .menu-groups {
-    max-height: 350px !important;
-  }
-  
-  .crepe-editor-container .milkdown-slash-menu .menu-groups .menu-group li {
-    min-width: 200px !important;
-    padding: 12px 8px !important;
-  }
+  background: var(--crepe-on-surface-variant);
 }
 
 /* ========================================

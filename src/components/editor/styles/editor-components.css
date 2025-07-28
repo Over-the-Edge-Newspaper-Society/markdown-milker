@@ -157,8 +157,6 @@
    DROPDOWN MENUS & POPUPS - FIXED SCROLLING
    ======================================== */
 
-.editor-container .milkdown-slash-menu,
-.editor-container [class*="slash-menu"],
 .editor-container [class*="dropdown"],
 .editor-container [class*="menu"] {
   background: hsl(var(--popover));
@@ -459,174 +457,6 @@
   fill: currentColor;
 }
 
-/* ========================================
-   SLASH MENU SPECIFIC STYLING - FIXED SCROLLING
-   ======================================== */
-
-.editor-container .milkdown-slash-menu {
-  position: fixed;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  font-family: var(--font-default, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
-  color: hsl(var(--foreground));
-  background: hsl(var(--popover));
-  border-radius: 12px;
-  box-shadow: var(--editor-shadow-lg);
-  min-width: 260px;
-  max-width: 320px;
-  max-height: 420px;
-  overflow: hidden;
-}
-
-.editor-container .milkdown-slash-menu[data-show='false'] {
-  display: none;
-}
-
-/* Tab group styling */
-.editor-container .milkdown-slash-menu .tab-group {
-  border-bottom: none;
-  padding: 12px 12px 8px;
-  margin-bottom: 0;
-  flex-shrink: 0; /* Prevent tabs from shrinking */
-}
-
-.editor-container .milkdown-slash-menu .tab-group ul {
-  list-style-type: none;
-  padding: 8px 10px 0;
-  margin: 0;
-  display: flex;
-  gap: 10px;
-  flex-wrap: nowrap;
-}
-
-.editor-container .milkdown-slash-menu .tab-group ul li {
-  cursor: pointer;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 600;
-  line-height: 20px;
-  transition: background-color 0.15s ease;
-}
-
-.editor-container .milkdown-slash-menu .tab-group ul li:hover {
-  background: hsl(var(--accent));
-}
-
-.editor-container .milkdown-slash-menu .tab-group ul li.selected {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-}
-
-/* Dark mode for tab items */
-.dark .editor-container .milkdown-slash-menu .tab-group ul li.selected {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-}
-
-/* Menu groups container - THIS is where scrolling should happen */
-.editor-container .milkdown-slash-menu .menu-groups {
-  padding: 0;
-  margin: 0;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  scroll-behavior: smooth;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-
-/* Menu group items */
-.editor-container .milkdown-slash-menu .menu-groups .menu-group {
-  padding: 8px 12px 12px;
-  margin: 0;
-}
-
-.editor-container .milkdown-slash-menu .menu-groups .menu-group ul {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-}
-
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li {
-  min-width: 220px;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 10px;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background-color 0.15s ease;
-}
-
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li.hover,
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li:hover {
-  background: hsl(var(--accent));
-}
-
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li.active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-}
-
-/* Dark mode for menu group items */
-.dark .editor-container .milkdown-slash-menu .menu-groups .menu-group li.active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-}
-
-/* Menu item icons */
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li svg {
-  width: 24px;
-  height: 24px;
-  color: hsl(var(--muted-foreground));
-  fill: currentColor;
-  flex-shrink: 0;
-}
-
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li svg path {
-  fill: currentColor;
-}
-
-/* Ensure icons change color on hover/active */
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li:hover svg,
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li.hover svg,
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li.active svg {
-  color: currentColor;
-  fill: currentColor;
-}
-
-/* Menu item text */
-.editor-container .milkdown-slash-menu .menu-groups .menu-group li > span {
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 600;
-  line-height: 20px;
-}
-
-/* Scrollbar ONLY for the menu groups container */
-.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar {
-  width: 6px;
-}
-
-.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-  border-radius: 3px;
-}
-
-.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
-}
 
 /* ========================================
    RESPONSIVE DESIGN - FIXED SCROLLING
@@ -663,20 +493,164 @@
     font-size: 0.7rem;
   }
   
-  .editor-container .milkdown-slash-menu {
-    min-width: 240px;
-    max-width: 280px;
-    max-height: 350px; /* Smaller on mobile */
-  }
-  
-  .editor-container .milkdown-slash-menu .menu-groups {
-    max-height: 300px; /* Adjust for mobile */
-  }
-  
-  .editor-container .milkdown-slash-menu .menu-groups .menu-group li {
-    min-width: 200px;
-    padding: 12px 8px;
-  }
+}
+
+/* ========================================
+   SLASH MENU - CLEAN & SIMPLE
+   ======================================== */
+
+/* Main slash menu container */
+.editor-container .milkdown-slash-menu {
+  position: absolute;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  box-shadow: var(--editor-shadow-lg);
+  min-width: 280px;
+  max-width: min(320px, calc(100vw - 20px));
+  max-height: min(400px, calc(100vh - 40px));
+  overflow: hidden;
+}
+
+.editor-container .milkdown-slash-menu[data-show='false'] {
+  display: none;
+}
+
+/* Ensure menu groups and items stay within the container */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group,
+.editor-container .milkdown-slash-menu .menu-groups .menu-group ul,
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li {
+  position: static !important;
+}
+
+
+/* Tab group */
+.editor-container .milkdown-slash-menu .tab-group {
+  padding: 8px;
+  border-bottom: 1px solid hsl(var(--border));
+  flex-shrink: 0;
+  position: relative;
+}
+
+.editor-container .milkdown-slash-menu .tab-group ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 4px;
+}
+
+.editor-container .milkdown-slash-menu .tab-group ul li {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.editor-container .milkdown-slash-menu .tab-group ul li:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.editor-container .milkdown-slash-menu .tab-group ul li.selected {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Menu groups container */
+.editor-container .milkdown-slash-menu .menu-groups {
+  flex: 1;
+  min-height: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: block;
+  position: relative;
+}
+
+/* Menu group */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group {
+  padding: 4px 0;
+  display: block;
+  position: static;
+}
+
+/* Menu group headers (hidden) */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group h6 {
+  display: none;
+}
+
+/* Menu group lists */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: static;
+}
+
+/* Menu items */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 0 4px;
+  transition: background-color 0.15s ease;
+  min-height: 36px;
+  position: static;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li:hover,
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li.hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Menu item icons */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li svg {
+  width: 18px;
+  height: 18px;
+  color: hsl(var(--muted-foreground));
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* Menu item text */
+.editor-container .milkdown-slash-menu .menu-groups .menu-group li > span {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Scrollbar styling */
+.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar {
+  width: 4px;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 2px;
+}
+
+.editor-container .milkdown-slash-menu .menu-groups::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
 }
 
 /* ========================================
