@@ -50,6 +50,7 @@ interface UnifiedCrepeEditorProps {
   wsUrl?: string
   collaborative?: boolean
   onImageLibraryOpen?: () => void
+  hideStatusBar?: boolean
 }
 
 interface FixedToolbarProps {
@@ -241,6 +242,7 @@ export function UnifiedCrepeEditor({
   onChange,
   wsUrl = 'ws://localhost:1234',
   collaborative = false,
+  hideStatusBar = false,
   onImageLibraryOpen
 }: UnifiedCrepeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -426,17 +428,19 @@ export function UnifiedCrepeEditor({
 
   return (
     <div className="unified-crepe-editor">
-      <EditorStatusBar
-        connectionStatus={currentConnectionStatus}
-        collaborators={collaborators}
-        collaborative={collaborative}
-        hasError={hasError}
-        errorMessage={errorMessage}
-        isLoading={!isReady}
-        documentId={documentId}
-        saveCount={saveCount}
-        lastSaveTime={lastSaveTime}
-      />
+      {!hideStatusBar && (
+        <EditorStatusBar
+          connectionStatus={currentConnectionStatus}
+          collaborators={collaborators}
+          collaborative={collaborative}
+          hasError={hasError}
+          errorMessage={errorMessage}
+          isLoading={!isReady}
+          documentId={documentId}
+          saveCount={saveCount}
+          lastSaveTime={lastSaveTime}
+        />
+      )}
 
       {/* Fixed Toolbar */}
       {isReady && !isUnmountingRef.current && (

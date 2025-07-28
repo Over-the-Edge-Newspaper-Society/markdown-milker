@@ -21,9 +21,10 @@ interface FrontmatterEditorProps {
   content: string;
   onChange: (frontmatter: string, markdownContent: string) => void;
   className?: string;
+  inlineMode?: boolean;
 }
 
-export const FrontmatterEditor = ({ content, onChange, className }: FrontmatterEditorProps) => {
+export const FrontmatterEditor = ({ content, onChange, className, inlineMode = false }: FrontmatterEditorProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [frontmatterData, setFrontmatterData] = useState<FrontmatterData>({});
   const [markdownContent, setMarkdownContent] = useState('');
@@ -172,34 +173,69 @@ export const FrontmatterEditor = ({ content, onChange, className }: FrontmatterE
     setTimeout(() => updateContent({}), 0);
   };
 
-  if (!isExpanded) {
+  // Update the status bar with frontmatter info in inline mode
+  useEffect(() => {
+    if (inlineMode) {
+      const statusElement = document.getElementById('frontmatter-info');
+      if (statusElement) {
+        const fieldCount = Object.keys(frontmatterData).length;
+        const titleText = frontmatterData.title;
+        
+        statusElement.innerHTML = fieldCount > 0 ? `
+          <span class="text-muted-foreground">•</span>
+          <button class="hover:bg-muted rounded px-1 py-0.5 transition-colors flex items-center gap-1" onclick="document.dispatchEvent(new CustomEvent('toggleFrontmatter'))">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isExpanded ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'}"></path>
+            </svg>
+            <span>Frontmatter (${fieldCount} fields)</span>
+            ${titleText ? `<span class="text-muted-foreground">• ${titleText}</span>` : ''}
+          </button>
+        ` : '';
+      }
+    }
+  }, [inlineMode, frontmatterData, isExpanded]);
+  
+  // Listen for toggle events in inline mode
+  useEffect(() => {
+    if (inlineMode) {
+      const handleToggle = () => setIsExpanded(!isExpanded);
+      document.addEventListener('toggleFrontmatter', handleToggle);
+      return () => document.removeEventListener('toggleFrontmatter', handleToggle);
+    }
+  }, [inlineMode, isExpanded]);
+
+  if (!isExpanded && !inlineMode) {
     return (
       <div className={`border-b bg-muted/30 ${className}`}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsExpanded(true)}
-          className="w-full justify-start h-8 px-3"
-        >
-          <ChevronRight className="w-4 h-4 mr-2" />
-          <span className="text-sm">
-            {Object.keys(frontmatterData).length > 0 
-              ? `Frontmatter (${Object.keys(frontmatterData).length} fields)` 
-              : 'Add Frontmatter'
-            }
-          </span>
-          {frontmatterData.title && (
-            <span className="ml-2 text-xs text-muted-foreground">
-              • {frontmatterData.title}
+        <div className="px-4 h-8 flex items-center text-xs">
+          <button
+            onClick={() => setIsExpanded(true)}
+            className="flex items-center gap-1.5 hover:bg-muted rounded px-2 py-1 transition-colors"
+          >
+            <ChevronRight className="w-3 h-3" />
+            <span>
+              {Object.keys(frontmatterData).length > 0 
+                ? `Frontmatter (${Object.keys(frontmatterData).length} fields)` 
+                : 'Add Frontmatter'
+              }
             </span>
-          )}
-        </Button>
+            {frontmatterData.title && (
+              <span className="text-muted-foreground">
+                • {frontmatterData.title}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     );
   }
+  
+  if (!isExpanded && inlineMode) {
+    return null; // In inline mode, content is shown in the status bar
+  }
 
   return (
-    <div className={`border-b bg-muted/30 ${className}`}>
+    <div className={`border-b bg-muted/30 ${className} ${inlineMode ? 'border-t' : ''}`}>
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <Button

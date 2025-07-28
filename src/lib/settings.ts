@@ -10,6 +10,7 @@ interface AppSettings {
   editor: {
     autoSave: boolean;
     theme: 'light' | 'dark' | 'system';
+    defaultMode: 'solo' | 'collaborative';
   };
 }
 
@@ -54,7 +55,8 @@ export class SettingsManager {
       },
       editor: {
         autoSave: true,
-        theme: 'system'
+        theme: 'system',
+        defaultMode: 'solo'
       }
     };
   }

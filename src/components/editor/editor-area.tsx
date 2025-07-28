@@ -3,6 +3,7 @@
 
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { useFileStore } from '@/lib/stores/file-store'
+import { SettingsManager } from '@/lib/settings'
 import { UnifiedCrepeEditor } from './UnifiedCrepeEditor'
 import { DocsPreview } from '../preview/DocsPreview'
 import { FrontmatterEditor } from './FrontmatterEditor'
@@ -26,7 +27,11 @@ export function EditorArea() {
   const { selectedFile, closeFile } = useFileStore()
   const [fileContent, setFileContent] = useState('')
   const [markdownOnly, setMarkdownOnly] = useState('')
-  const [editorMode, setEditorMode] = useState<EditorMode>('solo')
+  // Initialize editor mode from settings
+  const [editorMode, setEditorMode] = useState<EditorMode>(() => {
+    const settings = SettingsManager.getSettings()
+    return settings?.editor?.defaultMode || 'solo'
+  })
   const [isFileLoaded, setIsFileLoaded] = useState(false)
   const [totalSaves, setTotalSaves] = useState(0)
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
@@ -336,122 +341,119 @@ export function EditorArea() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Clean file header */}
-      <div className="border-b px-4 py-2 flex items-center justify-between bg-muted/30">
-        <div className="flex items-center gap-3">
-          <FileText className="h-4 w-4" />
-          <span className="text-sm font-medium">{selectedFile}</span>
-          <span className="text-xs text-muted-foreground">
-            {fileContent?.length || 0} chars
-          </span>
-          
-          {/* Show save status only when active */}
-          {showSaveStatus && (
-            <span className={`text-xs ${statusDisplay.color} transition-opacity`}>
-              {statusDisplay.text}
-            </span>
-          )}
-          
-          {/* Save count (only show if > 0 and not too intrusive) */}
-          {totalSaves > 0 && (
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-              {totalSaves} saves
-            </span>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-3">
-          {/* Image Library Button for Editor */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={openEditorImagePicker}
-            className="flex items-center gap-1"
-            title="Open Image Library"
-          >
-            <Images className="h-3 w-3" />
-            <span className="text-xs">Images</span>
-          </Button>
-
-          {/* Simple Mode Switch */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleMode}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                editorMode === 'collaborative' ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
-              title={`Switch to ${editorMode === 'collaborative' ? 'solo' : 'collaborative'} mode`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  editorMode === 'collaborative' ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
+      {/* Unified 2-row header */}
+      <div className="border-b bg-muted/30">
+        {/* Row 1: File path, tabs, and actions */}
+        <div className="px-4 h-10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileText className="h-4 w-4" />
+            <span className="text-sm font-medium">{selectedFile}</span>
+            <span className="text-xs text-muted-foreground">• {fileContent?.length || 0} chars</span>
             
-            <div className="flex items-center gap-1 text-xs">
-              {editorMode === 'collaborative' ? (
-                <>
-                  <Users className="h-3 w-3 text-blue-600" />
-                  <span className="text-blue-600 font-medium">Collaborative</span>
-                </>
-              ) : (
-                <>
-                  <User className="h-3 w-3 text-gray-600" />
-                  <span className="text-gray-600 font-medium">Solo</span>
-                </>
-              )}
+            {/* Tab buttons inline */}
+            <div className="flex items-center ml-4">
+              <button
+                onClick={() => setActiveTab('editor')}
+                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  activeTab === 'editor'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted'
+                }`}
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                Editor
+              </button>
+              <button
+                onClick={() => setActiveTab('preview')}
+                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded ml-1 transition-colors ${
+                  activeTab === 'preview'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted'
+                }`}
+              >
+                <Book className="h-3.5 w-3.5" />
+                Docs Preview
+              </button>
             </div>
           </div>
           
-          {/* Manual save button */}
-          <button
-            onClick={manualSave}
-            disabled={isManualSaving || isSavingRef.current}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50 transition-colors"
-            title="Save manually"
-          >
-            <Save className="h-3 w-3" />
-            {isManualSaving ? 'Saving...' : 'Save'}
-          </button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={openEditorImagePicker}
+              className="h-7 px-2"
+              title="Images"
+            >
+              <Images className="h-3.5 w-3.5" />
+            </Button>
+            <button
+              onClick={manualSave}
+              disabled={isManualSaving || isSavingRef.current}
+              className="h-7 px-2.5 text-xs rounded hover:bg-muted transition-colors flex items-center gap-1"
+            >
+              <Save className="h-3 w-3" />
+              Save
+            </button>
+            <button
+              onClick={handleClose}
+              className="h-7 w-7 rounded hover:bg-muted transition-colors flex items-center justify-center"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        
+        {/* Row 2: Combined status and frontmatter line */}
+        <div className="px-4 h-8 flex items-center justify-between text-xs border-t">
+          <div className="flex items-center gap-2">
+            {/* Mode status */}
+            {editorMode === 'collaborative' ? (
+              <>
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <Users className="h-3.5 w-3.5 text-green-600" />
+                <span className="font-medium text-green-600">Collaborative</span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <User className="h-3.5 w-3.5 text-blue-600" />
+                <span className="font-medium text-blue-600">Solo</span>
+              </>
+            )}
+            
+            {/* Save info */}
+            {totalSaves > 0 && (
+              <>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-green-600">{totalSaves} saves</span>
+              </>
+            )}
+            {lastSaveTime && (
+              <>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-blue-600">{lastSaveTime.toLocaleTimeString()}</span>
+              </>
+            )}
+            
+            {/* Frontmatter info - will be populated by FrontmatterEditor */}
+            <span id="frontmatter-info" className="flex items-center gap-2"></span>
+          </div>
           
+          {/* Right-aligned toggle button */}
           <button
-            onClick={handleClose}
-            className="p-1.5 rounded hover:bg-muted transition-colors"
-            title="Close file"
+            onClick={toggleMode}
+            className="px-2 py-1 rounded text-xs bg-muted hover:bg-muted/80 transition-colors font-medium"
+            title={`Switch to ${editorMode === 'collaborative' ? 'solo' : 'collaborative'} mode`}
           >
-            <X className="h-4 w-4" />
+            Switch to {editorMode === 'collaborative' ? 'Solo' : 'Collaborative'}
           </button>
         </div>
       </div>
 
-      {/* Tabbed interface with Editor and Preview */}
+      {/* Content area */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Custom Tab Headers */}
-        <div className="w-full border-b bg-transparent p-0 flex-shrink-0 h-10 flex items-center">
-          <button
-            onClick={() => setActiveTab('editor')}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'editor'
-                ? 'text-foreground border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Edit3 className="h-4 w-4" />
-            Editor
-          </button>
-          <button
-            onClick={() => setActiveTab('preview')}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'preview'
-                ? 'text-foreground border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Book className="h-4 w-4" />
-            Docs Preview
-          </button>
-        </div>
         
         {/* Tab Content */}
         <div className="flex-1 overflow-hidden">
@@ -460,6 +462,7 @@ export function EditorArea() {
               <FrontmatterEditor
                 content={fileContent}
                 onChange={handleFrontmatterChange}
+                inlineMode={true}
               />
               <div ref={editorRef} className="flex-1 overflow-hidden">
                 <UnifiedCrepeEditor
@@ -470,6 +473,7 @@ export function EditorArea() {
                   wsUrl={process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'}
                   collaborative={editorMode === 'collaborative'}
                   onImageLibraryOpen={handleImageLibraryOpen}
+                  hideStatusBar={true} // Hide the internal status bar since we show it above
                 />
               </div>
             </div>

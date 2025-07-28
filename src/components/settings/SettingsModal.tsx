@@ -355,6 +355,21 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 </select>
               </div>
             </div>
+            
+            <div className="space-y-1">
+              <Label className="text-sm">Default Editor Mode</Label>
+              <select
+                value={settings.editor.defaultMode}
+                onChange={(e) => setSettings(prev => ({
+                  ...prev,
+                  editor: { ...prev.editor, defaultMode: e.target.value as 'solo' | 'collaborative' }
+                }))}
+                className="w-full h-8 px-2 border rounded-md text-sm bg-background dark:bg-background"
+              >
+                <option value="solo">Solo Mode (work independently)</option>
+                <option value="collaborative">Collaborative Mode (real-time sharing)</option>
+              </select>
+            </div>
           </div>
         </div>
         
