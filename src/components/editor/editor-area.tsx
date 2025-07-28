@@ -452,11 +452,11 @@ export function EditorArea() {
         </div>
       </div>
 
-      {/* Content area */}
-      <div className="flex-1 overflow-hidden flex flex-col">
+      {/* Content area - Fixed overflow to allow menus to show */}
+      <div className="flex-1 flex flex-col relative">
         
-        {/* Tab Content */}
-        <div className="flex-1 overflow-hidden">
+        {/* Tab Content - Allow overflow for editor menus */}
+        <div className="flex-1 relative">
           {activeTab === 'editor' && (
             <div className="h-full flex flex-col">
               <FrontmatterEditor
@@ -464,7 +464,7 @@ export function EditorArea() {
                 onChange={handleFrontmatterChange}
                 inlineMode={true}
               />
-              <div ref={editorRef} className="flex-1 overflow-hidden">
+              <div ref={editorRef} className="flex-1 relative min-h-0">
                 <UnifiedCrepeEditor
                   key={editorKey} // This ensures complete remount on mode/file changes
                   documentId={documentId}

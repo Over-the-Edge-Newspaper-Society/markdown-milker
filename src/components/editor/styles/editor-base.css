@@ -9,6 +9,7 @@
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   transition: background-color 0.2s ease, color 0.2s ease;
+  position: relative;
   
   /* CSS Custom Properties for theming */
   --editor-bg: hsl(var(--background));
@@ -25,8 +26,12 @@
 /* Toolbar Container */
 .toolbar-container {
   padding: 1rem;
-  padding-bottom: 0;
+  padding-bottom: 1rem;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: transparent;
 }
 
 /* Editor Container - Main content area */
@@ -34,8 +39,10 @@
   flex: 1;
   height: 100%;
   width: 100%;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
+  max-width: 100%;
 }
 
 /* Ensure proper height calculation */
@@ -60,6 +67,8 @@
   /* CRITICAL: Enable scrolling */
   overflow-y: auto;
   overflow-x: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Editor content area */
@@ -86,6 +95,26 @@
   height: auto;
   overflow: visible;
   padding-bottom: 200px;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+/* Force all content to wrap */
+.editor-container .ProseMirror * {
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Paragraphs and text blocks */
+.editor-container .ProseMirror p,
+.editor-container .ProseMirror div,
+.editor-container .ProseMirror li {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Selection styles */

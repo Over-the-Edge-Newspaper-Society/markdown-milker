@@ -39,6 +39,11 @@
   background: transparent !important;
   border-radius: 0;
   margin: 0;
+  overflow-x: hidden;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  word-break: break-all !important;
+  overflow-wrap: anywhere !important;
 }
 
 /* Fix text selection visibility in code blocks */

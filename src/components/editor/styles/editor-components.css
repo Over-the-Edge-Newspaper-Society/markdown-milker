@@ -2,6 +2,56 @@
 /* UI component styles for toolbar, image blocks, menus, etc. */
 
 /* ========================================
+   EDITOR CONTAINER OVERFLOW FIXES
+   ======================================== */
+
+/* Ensure the main editor container allows overflow for menus */
+.editor-container {
+  position: relative;
+  overflow: visible !important;
+  height: 100%;
+  width: 100%;
+  max-width: 100% !important;
+}
+
+/* ULTIMATE TEXT WRAPPING - HIGHEST PRIORITY */
+.editor-container *,
+.crepe-editor-container *,
+.milkdown *,
+.ProseMirror *,
+.cm-editor *,
+.cm-content *,
+.cm-line {
+  max-width: 100% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-all !important;
+}
+
+/* Specific overrides for code blocks */
+.editor-container pre,
+.editor-container code,
+.crepe-editor-container pre,
+.crepe-editor-container code,
+.milkdown pre,
+.milkdown code {
+  white-space: pre-wrap !important;
+  overflow-x: hidden !important;
+}
+
+/* Ensure the editor content area allows menus to show */
+.editor-container > div,
+.editor-container .milkdown-editor {
+  overflow: visible !important;
+}
+
+/* Ensure all fixed positioned elements can escape container bounds */
+.editor-container [style*="position: fixed"],
+.editor-container .fixed-position {
+  z-index: 9999 !important;
+}
+
+/* ========================================
    GENERAL SVG ICON FIXES FOR DARK MODE
    ======================================== */
 
@@ -116,7 +166,8 @@
   border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
   box-shadow: var(--editor-shadow-lg);
-  z-index: 50;
+  z-index: 9999; /* Increased z-index to ensure visibility */
+  position: fixed; /* Ensure menus can escape parent boundaries */
   /* Removed max-height to fix multiple scrollbars */
   overflow: visible;
 }
@@ -309,7 +360,7 @@
   box-shadow: var(--editor-shadow-md);
   padding: 0.5rem;
   position: fixed;
-  z-index: 50;
+  z-index: 9999;
 }
 
 /* ========================================
@@ -323,7 +374,7 @@
   border-radius: 0.375rem;
   box-shadow: var(--editor-shadow-sm);
   position: fixed;
-  z-index: 40;
+  z-index: 9998; /* High z-index but below menus */
 }
 
 .editor-container .operation-item {
@@ -413,9 +464,10 @@
    ======================================== */
 
 .editor-container .milkdown-slash-menu {
-  position: absolute;
-  z-index: 50;
-  display: block;
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-default, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   color: hsl(var(--foreground));
   background: hsl(var(--popover));
@@ -423,8 +475,8 @@
   box-shadow: var(--editor-shadow-lg);
   min-width: 260px;
   max-width: 320px;
-  max-height: 420px; /* Only set max-height on the main container */
-  overflow: hidden; /* Hide overflow on main container */
+  max-height: 420px;
+  overflow: hidden;
 }
 
 .editor-container .milkdown-slash-menu[data-show='false'] {
@@ -478,10 +530,9 @@
 .editor-container .milkdown-slash-menu .menu-groups {
   padding: 0;
   margin: 0;
-  /* Remove conflicting max-height and let the parent control it */
-  height: auto;
-  max-height: 350px; /* Reasonable max height for menu items */
-  overflow-y: auto; /* Only this container should scroll */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
@@ -638,13 +689,11 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.5rem;
-  background: hsl(var(--background));
+  background: hsl(var(--background) / 0.98);
+  backdrop-filter: blur(10px);
   border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  position: sticky;
-  top: 0;
-  z-index: 20;
   overflow-x: auto;
   overflow-y: visible;
 }

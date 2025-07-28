@@ -106,7 +106,7 @@ export function MainLayout() {
         </div>
       </header>
       
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex relative">
         <div className="w-64 h-full border-r bg-muted/30">
           <EnhancedDirectoryTree />
         </div>
