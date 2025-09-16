@@ -13,6 +13,7 @@ services:
       - YJS_SERVER_URL=ws://yjs-server:1234
     volumes:
       - ./docs:/app/docs
+      - ./shared-assets:/app/shared-assets
       - /app/node_modules
       - /app/.next
     depends_on:
@@ -20,12 +21,13 @@ services:
     
   docs:
     build:
-      context: ./over-the-edge-docs-starlight
+      context: ./repo
       dockerfile: ../Dockerfile.docs
     ports:
       - "4321:4321"
     volumes:
-      - ./docs:/app/src/content/docs
+      - ./repo:/app
+      - ./shared-assets:/assets:ro
       - /app/node_modules
       - /app/dist
     environment:

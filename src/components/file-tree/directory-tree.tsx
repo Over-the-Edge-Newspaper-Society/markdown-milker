@@ -4,12 +4,14 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
-import { Search, FileText } from 'lucide-react'
+import { Search, FileText, Wrench } from 'lucide-react'
 import { FileCreationDialog, QuickCreateButtons } from './file-creation-dialog'
 import { DraggableFileItem } from './draggable-file-item'
 import { useFileTree } from '@/lib/hooks/use-file-tree'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { cn } from '@/lib/utils'
+import { toast } from '@/components/ui/use-toast'
+import { useProjectStore } from '@/lib/stores/project-store'
 
 interface FileNode {
   name: string
@@ -19,6 +21,7 @@ interface FileNode {
   size?: number
   modified?: string
   level?: number
+  sidebarOrder?: number
 }
 
 export function EnhancedDirectoryTree() {
@@ -27,6 +30,7 @@ export function EnhancedDirectoryTree() {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['']))
   const [dragOverPath, setDragOverPath] = useState<string | null>(null)
   const [isRootDragOver, setIsRootDragOver] = useState(false)
+  const { activeProject } = useProjectStore()
 
   // Build nested tree structure from flat file list
   const fileTree = useMemo(() => {
@@ -36,16 +40,8 @@ export function EnhancedDirectoryTree() {
     // Filter out _assets folder from display
     const visibleFiles = files.filter(file => !file.path.startsWith('_assets'))
 
-    // Sort files: directories first, then alphabetically
-    const sortedFiles = [...visibleFiles].sort((a, b) => {
-      if (a.type !== b.type) {
-        return a.type === 'directory' ? -1 : 1
-      }
-      return a.path.localeCompare(b.path)
-    })
-
     // Build tree structure
-    sortedFiles.forEach(file => {
+    visibleFiles.forEach(file => {
       const pathParts = file.path.split('/')
       let currentPath = ''
       let currentLevel = tree
@@ -66,7 +62,8 @@ export function EnhancedDirectoryTree() {
             children: isLastPart && file.type === 'directory' ? [] : undefined,
             size: file.size,
             modified: file.modified,
-            level
+            level,
+            sidebarOrder: isLastPart ? file.sidebarOrder : undefined
           }
           
           // Only add children array for directories
@@ -76,14 +73,11 @@ export function EnhancedDirectoryTree() {
           
           nodeMap.set(currentPath, existingNode)
           currentLevel.push(existingNode)
-          
-          // Sort current level
-          currentLevel.sort((a, b) => {
-            if (a.type !== b.type) {
-              return a.type === 'directory' ? -1 : 1
-            }
-            return a.name.localeCompare(b.name)
-          })
+        }
+
+        const isLastPart = index === pathParts.length - 1
+        if (isLastPart && file.type === 'file' && file.sidebarOrder !== undefined) {
+          existingNode.sidebarOrder = file.sidebarOrder
         }
         
         if (existingNode.children && index < pathParts.length - 1) {
@@ -91,6 +85,70 @@ export function EnhancedDirectoryTree() {
         }
       })
     })
+
+    // Sort each level by sidebar order (with fallbacks)
+    const orderCache = new WeakMap<FileNode, number>()
+    const UNKNOWN_ORDER = 1_000_000
+
+    const getNodeOrder = (node: FileNode): number => {
+      if (orderCache.has(node)) {
+        return orderCache.get(node)!
+      }
+
+      let value = typeof node.sidebarOrder === 'number' ? node.sidebarOrder : undefined
+
+      if (value === undefined && node.type === 'directory' && node.children && node.children.length > 0) {
+        const indexChild = node.children.find((child) => child.type === 'file' && child.name.startsWith('index.'))
+        if (indexChild) {
+          const childOrder = getNodeOrder(indexChild)
+          if (childOrder !== UNKNOWN_ORDER) {
+            value = childOrder
+          }
+        }
+
+        if (value === undefined) {
+          const childOrders = node.children
+            .map((child) => getNodeOrder(child))
+            .filter((childOrder) => childOrder !== UNKNOWN_ORDER)
+
+          if (childOrders.length > 0) {
+            value = Math.min(...childOrders)
+          }
+        }
+      }
+
+      if (value === undefined) {
+        value = UNKNOWN_ORDER
+      }
+
+      orderCache.set(node, value)
+      return value
+    }
+
+    const sortNodes = (nodes: FileNode[]) => {
+      nodes.sort((a, b) => {
+        const orderA = getNodeOrder(a)
+        const orderB = getNodeOrder(b)
+
+        if (orderA !== orderB) {
+          return orderA - orderB
+        }
+
+        if (a.type !== b.type) {
+          return a.type === 'directory' ? -1 : 1
+        }
+
+        return a.name.localeCompare(b.name)
+      })
+
+      nodes.forEach((node) => {
+        if (node.children && node.children.length > 0) {
+          sortNodes(node.children)
+        }
+      })
+    }
+
+    sortNodes(tree)
 
     return tree
   }, [files])
@@ -137,15 +195,82 @@ export function EnhancedDirectoryTree() {
     }
   }
 
+  const reorderDirectory = useCallback(async (directory: string, orderedFiles: string[]) => {
+    try {
+      const res = await fetch('/api/starlight/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directory, orderedFiles, projectId: activeProject || undefined })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        toast({ title: 'Order updated', description: `${data.updated || 0} files reordered`, variant: 'success' })
+        ;(globalThis as any).__FM_CACHE__ = new Map()
+        await refreshFiles()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast({ title: 'Reorder failed', description: err.error || 'Unknown error', variant: 'error' })
+      }
+    } catch (error) {
+      toast({ title: 'Reorder error', description: (error as Error).message, variant: 'error' })
+    }
+  }, [activeProject, refreshFiles])
+
   const handleMove = async (sourcePath: string, targetPath: string) => {
     try {
       await moveFile(sourcePath, targetPath)
+
+      const sourceDir = sourcePath.includes('/') ? sourcePath.split('/').slice(0, -1).join('/') : ''
+      const targetDir = targetPath.includes('/') ? targetPath.split('/').slice(0, -1).join('/') : ''
+
+      const uniqueDirs = Array.from(new Set([sourceDir, targetDir]))
+
+      await Promise.all(uniqueDirs.map(async (dir) => {
+        try {
+          const dirRes = await fetch('/api/starlight/rebalance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ directory: dir, projectId: activeProject || undefined })
+          })
+          if (!dirRes.ok) {
+            const err = await dirRes.json().catch(() => ({}))
+            console.error('Rebalance failed for', dir, err)
+          }
+        } catch (err) {
+          console.error('Failed to trigger rebalance for', dir, err)
+        }
+      }))
+
+      ;(globalThis as any).__FM_CACHE__ = new Map()
       await refreshFiles()
     } catch (error) {
       console.error('Failed to move item:', error)
       throw error
     }
   }
+
+  const handleOrderMove = useCallback(async (node: FileNode, direction: 'up' | 'down', levelNodes: FileNode[]) => {
+    if (node.type !== 'file' || node.name === 'index.md') {
+      return
+    }
+
+    const siblings = levelNodes.filter((n) => n.type === 'file')
+    const currentIndex = siblings.findIndex((n) => n.path === node.path)
+    if (currentIndex === -1) return
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    if (targetIndex < 0 || targetIndex >= siblings.length) return
+
+    const ordered = [...siblings]
+    const [moved] = ordered.splice(currentIndex, 1)
+    ordered.splice(targetIndex, 0, moved)
+
+    const parentPath = node.path.includes('/') ? node.path.split('/').slice(0, -1).join('/') : ''
+    const orderedNames = ordered.map((sibling) => sibling.name)
+
+    await reorderDirectory(parentPath, orderedNames)
+  }, [reorderDirectory])
 
   const handleDragOver = useCallback((e: React.DragEvent, path: string, isDirectory: boolean) => {
     e.preventDefault()
@@ -178,6 +303,9 @@ export function EnhancedDirectoryTree() {
     try {
       const fileName = sourcePath.split('/').pop()
       const newPath = targetPath ? `${targetPath}/${fileName}` : fileName
+      if (!newPath || newPath === sourcePath) {
+        return
+      }
       await handleMove(sourcePath, newPath!)
     } catch (error) {
       console.error('Drop failed:', error)
@@ -256,10 +384,15 @@ export function EnhancedDirectoryTree() {
   }, [fileTree, searchTerm])
 
   const renderFileTree = (nodes: FileNode[], level: number = 0): React.ReactNode => {
+    const fileNodes = nodes.filter((n) => n.type === 'file')
+
     return nodes.map((node, index) => {
       const isExpanded = expandedFolders.has(node.path)
       const isSelected = selectedFile === node.path
       const isDragOver = dragOverPath === node.path
+      const fileIndex = node.type === 'file' ? fileNodes.findIndex((n) => n.path === node.path) : -1
+      const canMoveUp = node.type === 'file' && node.name !== 'index.md' && fileIndex > 0
+      const canMoveDown = node.type === 'file' && node.name !== 'index.md' && fileIndex > -1 && fileIndex < fileNodes.length - 1
       
       return (
         <div key={node.path}>
@@ -275,6 +408,10 @@ export function EnhancedDirectoryTree() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            onMoveUp={canMoveUp ? () => handleOrderMove(node, 'up', nodes) : undefined}
+            onMoveDown={canMoveDown ? () => handleOrderMove(node, 'down', nodes) : undefined}
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
           />
           
           {/* Render children if expanded */}
@@ -310,6 +447,64 @@ export function EnhancedDirectoryTree() {
           onCreateFile={handleCreateFile}
           onCreateFolder={handleCreateFolder}
         />
+
+        {/* Order tools */}
+        <div className="flex items-center justify-between">
+          <button
+            className="text-xs px-2 py-1 rounded border hover:bg-muted"
+            title="Fix all sidebar orders in this directory"
+            onClick={async () => {
+              const path = selectedFile || ''
+              const dir = path ? path.split('/').slice(0, -1).join('/') : ''
+              try {
+                const res = await fetch('/api/starlight/rebalance', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ directory: dir, projectId: activeProject || undefined })
+                })
+                if (res.ok) {
+                  const data = await res.json()
+                  toast({ title: 'Orders fixed', description: `${data.updated || 0} files updated`, variant: 'success' })
+                  ;(globalThis as any).__FM_CACHE__ = new Map() // invalidate cached frontmatter
+                  await refreshFiles()
+                } else {
+                  const err = await res.json().catch(() => ({}))
+                  toast({ title: 'Rebalance failed', description: err.error || 'Unknown error', variant: 'error' })
+                }
+              } catch (e) {
+                toast({ title: 'Rebalance error', description: (e as Error).message, variant: 'error' })
+              }
+            }}
+          >
+            <span className="inline-flex items-center gap-1"><Wrench className="h-3 w-3" /> Fix All Orders</span>
+          </button>
+          <button
+            className="text-xs px-2 py-1 rounded border hover:bg-muted"
+            title="Fix all sidebar orders in the entire docs tree"
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/starlight/rebalance', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ directory: '', projectId: activeProject || undefined })
+                })
+                if (res.ok) {
+                  const data = await res.json()
+                  toast({ title: 'Orders fixed (root)', description: `${data.updated || 0} files updated`, variant: 'success' })
+                  ;(globalThis as any).__FM_CACHE__ = new Map()
+                  await refreshFiles()
+                } else {
+                  const err = await res.json().catch(() => ({}))
+                  toast({ title: 'Rebalance failed', description: err.error || 'Unknown error', variant: 'error' })
+                }
+              } catch (e) {
+                toast({ title: 'Rebalance error', description: (e as Error).message, variant: 'error' })
+              }
+            }}
+          >
+            <span className="inline-flex items-center gap-1"><Wrench className="h-3 w-3" /> Fix All • Root</span>
+          </button>
+        </div>
       </div>
 
       {/* File Tree with Full Height Root Drop Zone */}

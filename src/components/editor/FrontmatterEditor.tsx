@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { useFileStore } from '@/lib/stores/file-store';
+import { useProjectStore } from '@/lib/stores/project-store';
 
 interface FrontmatterData {
   title?: string;
@@ -13,6 +15,11 @@ interface FrontmatterData {
   sidebar?: {
     order?: number;
     label?: string;
+    hidden?: boolean;
+    badge?: {
+      text?: string;
+      variant?: 'note' | 'tip' | 'caution' | 'danger' | 'success' | 'default';
+    };
   };
   [key: string]: any;
 }
@@ -29,6 +36,8 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
   const [frontmatterData, setFrontmatterData] = useState<FrontmatterData>({});
   const [markdownContent, setMarkdownContent] = useState('');
   const [customFields, setCustomFields] = useState<Array<{key: string, value: string}>>([]);
+  const { files, selectedFile, setFiles } = useFileStore()
+  const { activeProject } = useProjectStore()
 
   // Parse frontmatter from content
   useEffect(() => {
@@ -69,6 +78,7 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
     const lines = yaml.split('\n');
     const result: any = {};
     let isInSidebar = false;
+    let isInBadge = false;
     
     for (const line of lines) {
       const trimmed = line.trim();
@@ -78,6 +88,12 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
       if (trimmed === 'sidebar:') {
         isInSidebar = true;
         result.sidebar = {};
+        continue;
+      }
+      if (isInSidebar && trimmed === 'badge:') {
+        isInBadge = true;
+        result.sidebar = result.sidebar || {};
+        result.sidebar.badge = {};
         continue;
       }
       
@@ -90,7 +106,17 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
           const value = indentedContent.substring(colonIndex + 1).trim();
           if (key && value) {
             const cleanValue = value.replace(/^['"]|['"]$/g, '');
-            result.sidebar[key] = isNaN(Number(cleanValue)) ? cleanValue : Number(cleanValue);
+            if (isInBadge && key) {
+              // badge nested fields
+              result.sidebar.badge = result.sidebar.badge || {};
+              result.sidebar.badge[key] = cleanValue;
+            } else {
+              if (key === 'hidden') {
+                result.sidebar.hidden = cleanValue === 'true';
+              } else {
+                result.sidebar[key] = isNaN(Number(cleanValue)) ? cleanValue : Number(cleanValue);
+              }
+            }
           }
         }
         continue;
@@ -99,6 +125,7 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
       // Handle top-level properties (not indented)
       if (!line.startsWith(' ') && line.includes(':')) {
         isInSidebar = false; // Exit sidebar section
+        isInBadge = false;
         const colonIndex = line.indexOf(':');
         if (colonIndex > 0) {
           const key = line.substring(0, colonIndex).trim();
@@ -132,6 +159,18 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
       if (frontmatterData.sidebar.label) {
         lines.push(`  label: ${frontmatterData.sidebar.label}`);
       }
+      if (frontmatterData.sidebar.hidden !== undefined) {
+        lines.push(`  hidden: ${frontmatterData.sidebar.hidden ? 'true' : 'false'}`);
+      }
+      if (frontmatterData.sidebar.badge && (frontmatterData.sidebar.badge.text || frontmatterData.sidebar.badge.variant)) {
+        lines.push('  badge:');
+        if (frontmatterData.sidebar.badge.text) {
+          lines.push(`    text: ${frontmatterData.sidebar.badge.text}`);
+        }
+        if (frontmatterData.sidebar.badge.variant) {
+          lines.push(`    variant: ${frontmatterData.sidebar.badge.variant}`);
+        }
+      }
     }
     
     // Add custom fields
@@ -153,6 +192,39 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
     const fullContent = yamlContent ? `---\n${yamlContent}\n---\n${markdownContent}` : markdownContent;
     onChange(fullContent, markdownContent);
   };
+
+  // Calculate smart order using sibling context
+  const calculateSmartOrder = (currentPath: string) => {
+    if (!currentPath) return undefined
+    const parts = currentPath.split('/')
+    const fileName = parts[parts.length - 1]
+    const parentPath = parts.slice(0, -1).join('/')
+
+    // Index pages always 0
+    if (fileName === 'index.md' || fileName === 'index.mdx') return 0
+
+    // Get alphabetical position among siblings in same directory
+    const siblings = files
+      .filter((f) => {
+        const fp = f.path.split('/')
+        const fParent = fp.slice(0, -1).join('/')
+        return fParent === parentPath && f.type === 'file'
+      })
+      .map((f) => f.name)
+      .sort((a, b) => a.localeCompare(b))
+
+    const position = Math.max(0, siblings.indexOf(fileName))
+
+    // Base order uses gaps of 10
+    let base = (position === -1 ? siblings.length : position) * 10
+
+    // Avoid conflicts if nearby numbers already used: nudge up until free
+    // We can't read existing orders from the tree cheaply here, so keep a simple rule:
+    // ensure non-zero and multiple of 10, with minimum 10
+    if (base === 0) base = 10
+    while (base % 10 !== 0) base += 1
+    return base
+  }
 
   const addCustomField = () => {
     setCustomFields([...customFields, { key: '', value: '' }]);
@@ -276,6 +348,131 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
               })}
               className="h-8 text-sm"
             />
+            <div className="flex gap-2 mt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7"
+                onClick={() => {
+                  const order = calculateSmartOrder(selectedFile || '')
+                  if (order !== undefined) {
+                    updateContent({ sidebar: { ...frontmatterData.sidebar, order } })
+                  }
+                }}
+              >
+                Auto-calc
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7"
+                onClick={async () => {
+                  const pathParts = (selectedFile || '').split('/')
+                  const dir = pathParts.slice(0, -1).join('/')
+                  try {
+                    const res = await fetch('/api/starlight/rebalance', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ directory: dir, projectId: activeProject || undefined })
+                    })
+                    if (res.ok) {
+                      const url = activeProject ? `/api/files?projectId=${encodeURIComponent(activeProject)}` : '/api/files'
+                      try {
+                        const refreshed = await fetch(url)
+                        if (refreshed.ok) {
+                          const data = await refreshed.json()
+                          setFiles(data)
+                        }
+                      } catch (err) {
+                        console.error('Failed to refresh files after rebalance:', err)
+                      }
+                      ;(globalThis as any).__FM_CACHE__ = new Map()
+                      alert('Fixed all order conflicts in the directory')
+                    } else {
+                      alert('Rebalance failed')
+                    }
+                  } catch {
+                    alert('Failed to trigger rebalance')
+                  }
+                }}
+              >
+                Fix All
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="fm-label" className="text-xs">Sidebar Label</Label>
+            <Input
+              id="fm-label"
+              placeholder="Custom label (optional)"
+              value={frontmatterData.sidebar?.label || ''}
+              onChange={(e) => updateContent({ 
+                sidebar: { 
+                  ...frontmatterData.sidebar, 
+                  label: e.target.value || undefined
+                }
+              })}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Hidden in Sidebar</Label>
+            <div className="h-8 flex items-center">
+              <input
+                type="checkbox"
+                checked={!!frontmatterData.sidebar?.hidden}
+                onChange={(e) => updateContent({
+                  sidebar: {
+                    ...frontmatterData.sidebar,
+                    hidden: e.target.checked || undefined
+                  }
+                })}
+                className="h-4 w-4"
+              />
+              <span className="text-xs text-muted-foreground ml-2">Hide page from sidebar</span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Badge</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Text"
+                value={frontmatterData.sidebar?.badge?.text || ''}
+                onChange={(e) => updateContent({
+                  sidebar: {
+                    ...frontmatterData.sidebar,
+                    badge: {
+                      ...(frontmatterData.sidebar?.badge || {}),
+                      text: e.target.value || undefined,
+                    }
+                  }
+                })}
+                className="h-8 text-sm"
+              />
+              <select
+                value={frontmatterData.sidebar?.badge?.variant || 'default'}
+                onChange={(e) => updateContent({
+                  sidebar: {
+                    ...frontmatterData.sidebar,
+                    badge: {
+                      ...(frontmatterData.sidebar?.badge || {}),
+                      variant: e.target.value as any
+                    }
+                  }
+                })}
+                className="h-8 text-sm border rounded px-2 bg-background"
+              >
+                <option value="default">default</option>
+                <option value="note">note</option>
+                <option value="tip">tip</option>
+                <option value="caution">caution</option>
+                <option value="danger">danger</option>
+                <option value="success">success</option>
+              </select>
+            </div>
           </div>
         </div>
 

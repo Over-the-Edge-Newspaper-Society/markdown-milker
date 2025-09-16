@@ -1,7 +1,7 @@
 // src/components/file-tree/draggable-file-item.tsx
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { 
   FileIcon, 
   FolderIcon, 
@@ -9,7 +9,9 @@ import {
   ChevronRight, 
   ChevronDown,
   MoreHorizontal,
-  GripVertical
+  GripVertical,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,6 +30,7 @@ interface FileNode {
   size?: number
   modified?: string
   level?: number
+  sidebarOrder?: number
 }
 
 interface DraggableFileItemProps {
@@ -42,6 +45,10 @@ interface DraggableFileItemProps {
   onDragOver: (e: React.DragEvent, path: string, isDirectory: boolean) => void
   onDragLeave: (e: React.DragEvent) => void
   onDrop: (e: React.DragEvent, path: string, isDirectory: boolean) => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  canMoveUp?: boolean
+  canMoveDown?: boolean
 }
 
 export function DraggableFileItem({ 
@@ -55,10 +62,20 @@ export function DraggableFileItem({
   onSelect,
   onDragOver,
   onDragLeave,
-  onDrop
+  onDrop,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = false,
+  canMoveDown = false
 }: DraggableFileItemProps) {
   const [isDragging, setIsDragging] = useState(false)
   const dragPreviewRef = useRef<HTMLDivElement | null>(null)
+  const [fmMeta, setFmMeta] = useState<{
+    order?: number
+    label?: string
+    hidden?: boolean
+    badge?: { text?: string; variant?: string }
+  } | null>(null)
   
   const hasChildren = node.children && node.children.length > 0
   const isDirectory = node.type === 'directory'
@@ -72,6 +89,46 @@ export function DraggableFileItem({
       onSelect(node.path)
     }
   }
+
+  // Lightweight frontmatter cache and fetcher
+  const fmCache: any = (globalThis as any).__FM_CACHE__ || ((globalThis as any).__FM_CACHE__ = new Map<string, any>())
+
+  useEffect(() => {
+    let ignore = false
+    if (!isDirectory) {
+      const cached = fmCache.get(node.path)
+      if (cached) {
+        setFmMeta(cached)
+      } else {
+        fetch(`/api/files?path=${encodeURIComponent(node.path)}`)
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (!data?.content || ignore) return
+            const fmMatch = String(data.content).match(/^---\n([\s\S]*?)\n---/)
+            if (!fmMatch) return
+            const yaml = fmMatch[1]
+            const meta: any = {}
+            // Very small YAML extraction for known fields
+            const get = (re: RegExp) => {
+              const m = yaml.match(re)
+              return m ? m[1].trim() : undefined
+            }
+            const orderVal = get(/order:\s*([^\n]+)/)
+            const labelVal = get(/label:\s*([^\n]+)/)
+            const hiddenVal = get(/hidden:\s*([^\n]+)/)
+            const badgeText = get(/badge:\s*[\s\S]*?\n\s*text:\s*([^\n]+)/)
+            const badgeVariant = get(/badge:\s*[\s\S]*?\n\s*variant:\s*([^\n]+)/)
+            if (orderVal) meta.order = Number(orderVal)
+            if (labelVal) meta.label = labelVal.replace(/^['"]|['"]$/g, '')
+            if (hiddenVal) meta.hidden = hiddenVal === 'true'
+            if (badgeText || badgeVariant) meta.badge = { text: badgeText, variant: badgeVariant }
+            fmCache.set(node.path, meta)
+            setFmMeta(meta)
+          }).catch(() => {})
+      }
+    }
+    return () => { ignore = true }
+  }, [node, node.path, isDirectory])
 
   const handleToggleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -158,6 +215,21 @@ export function DraggableFileItem({
     onDrop(e, node.path, isDirectory)
   }, [node.path, isDirectory, onDrop])
 
+  const handleMoveClick = (direction: 'up' | 'down') => (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (direction === 'up') {
+      onMoveUp?.()
+    } else {
+      onMoveDown?.()
+    }
+  }
+
+  useEffect(() => {
+    if (node.type === 'file' && node.sidebarOrder !== undefined) {
+      setFmMeta((prev) => ({ ...(prev || {}), order: node.sidebarOrder }))
+    }
+  }, [node.sidebarOrder, node.type])
+
   // Calculate indentation and tree lines
   const baseIndent = 8
   const levelIndent = 20
@@ -222,6 +294,31 @@ export function DraggableFileItem({
           <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab active:cursor-grabbing" />
         </div>
 
+        {node.type === 'file' && (onMoveUp || onMoveDown) && (
+          <div className="flex flex-col -ml-1 mr-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              className="h-4 w-4 p-0"
+              disabled={!canMoveUp}
+              onClick={handleMoveClick('up')}
+            >
+              <ArrowUp className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              className="h-4 w-4 p-0"
+              disabled={!canMoveDown}
+              onClick={handleMoveClick('down')}
+            >
+              <ArrowDown className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+
         {/* Expand/collapse button for directories */}
         {isDirectory && hasChildren ? (
           <Button
@@ -253,22 +350,38 @@ export function DraggableFileItem({
           )}
         </div>
 
-        {/* Name */}
-        <span className="text-sm truncate select-none">{node.name}</span>
-        
-        {/* File size for files - only show if size is meaningful */}
-        {!isDirectory && node.size !== undefined && node.size > 0 && (
-          <span className="text-xs text-muted-foreground ml-auto font-mono">
-            {formatFileSize(node.size)}
-          </span>
-        )}
+        {/* Name + indicators (left) */}
+        <div className="flex items-center gap-2 min-w-0 flex-[1_1_auto]">
+          <span className="text-sm truncate select-none max-w-[80px] sm:max-w-[120px]">{node.name}</span>
+          {!isDirectory && fmMeta?.order !== undefined && (
+            <span className="text-[10px] bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-1 rounded whitespace-nowrap">#{fmMeta.order}</span>
+          )}
+          {!isDirectory && fmMeta?.label && (
+            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">"{fmMeta.label}"</span>
+          )}
+          {!isDirectory && fmMeta?.badge?.text && (
+            <span className="text-[10px] px-1 rounded border opacity-80 whitespace-nowrap" style={{ borderColor: 'var(--border)'}}>
+              {fmMeta.badge.text}
+            </span>
+          )}
+          {!isDirectory && fmMeta?.hidden && (
+            <span className="text-[10px] px-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">hidden</span>
+          )}
+        </div>
 
-        {/* Children count for directories */}
-        {isDirectory && hasChildren && (
-          <span className="text-xs text-muted-foreground ml-auto bg-muted px-1.5 py-0.5 rounded">
-            {node.children!.length}
-          </span>
-        )}
+        {/* Right meta (size or children count) */}
+        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+          {!isDirectory && node.size !== undefined && node.size > 0 && (
+            <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">
+              {formatFileSize(node.size)}
+            </span>
+          )}
+          {isDirectory && hasChildren && (
+            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded whitespace-nowrap">
+              {node.children!.length}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Actions menu */}

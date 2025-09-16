@@ -4,18 +4,25 @@ import { readFile, writeFile, mkdir, unlink, rmdir, stat } from 'fs/promises'
 import { join, dirname } from 'path'
 import { existsSync } from 'fs'
 
-const DOCS_PATH = join(process.cwd(), 'docs')
+function getDocsPath(projectId?: string): string {
+  if (projectId) {
+    const projPath = join(process.cwd(), 'projects', projectId, 'src', 'content', 'docs')
+    if (existsSync(projPath)) return projPath
+  }
+  return join(process.cwd(), 'docs')
+}
 
 // Security check to prevent path traversal
-function isSecurePath(requestedPath: string) {
-  const fullPath = join(DOCS_PATH, requestedPath)
-  return fullPath.startsWith(DOCS_PATH)
+function isSecurePath(requestedPath: string, docsPath: string) {
+  const fullPath = join(docsPath, requestedPath)
+  return fullPath.startsWith(docsPath)
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sourcePath, targetPath } = body
+    const { sourcePath, targetPath, projectId } = body
+    const DOCS_PATH = getDocsPath(projectId)
     
     console.log('Move request:', { sourcePath, targetPath })
     
@@ -23,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Source and target paths are required' }, { status: 400 })
     }
 
-    if (!isSecurePath(sourcePath) || !isSecurePath(targetPath)) {
+    if (!isSecurePath(sourcePath, DOCS_PATH) || !isSecurePath(targetPath, DOCS_PATH)) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
     }
 

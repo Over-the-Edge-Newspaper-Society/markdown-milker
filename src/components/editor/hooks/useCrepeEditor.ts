@@ -2,6 +2,7 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
+import { transformAssetPathsToDisplay } from '@/lib/markdown-preview-transform'
 import { CrepeBuilder } from '@milkdown/crepe/builder'
 import { collab } from '@milkdown/plugin-collab'
 import { gfm } from '@milkdown/preset-gfm'
@@ -58,6 +59,8 @@ export function useCrepeEditor({
       
       // Validate and sanitize initial content
       let sanitizedContent = collaborative ? '' : (initialContent || '').trim()
+      // Transform centralized asset tokens to previewable URLs
+      sanitizedContent = transformAssetPathsToDisplay(sanitizedContent)
       
       // Content is already sanitized, no additional table processing needed
       

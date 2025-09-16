@@ -8,6 +8,7 @@ import { ThemeToggle } from '../theme/theme-toggle'
 import { ImagePicker } from '../editor/image-picker'
 import { SettingsModal } from '../settings/SettingsModal'
 import { GitHubSyncButtons } from '../github-sync/GitHubSyncButtons'
+import { ProjectSwitcher } from '../ProjectSwitcher'
 import { useTheme } from '../theme/theme-provider'
 import { SettingsManager } from '@/lib/settings'
 import { FileText, Zap, Images, Settings, AlertCircle } from 'lucide-react'
@@ -41,6 +42,7 @@ export function MainLayout() {
     <div className="h-screen flex flex-col bg-background text-foreground transition-colors">
       <header className="border-b px-4 py-2 flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-3">
+          <ProjectSwitcher />
           <div className="flex items-center gap-2">
             <div className="relative">
               <FileText className="h-6 w-6 text-primary" />

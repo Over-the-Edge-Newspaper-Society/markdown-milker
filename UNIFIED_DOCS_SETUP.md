@@ -1,3 +1,7 @@
+---
+sidebar:
+  order: 10
+---
 # Unified Documentation Platform Setup
 
 This guide walks you through setting up the unified documentation platform that combines the Markdown Milker editor with Astro Starlight documentation preview and GitHub integration.

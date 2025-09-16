@@ -5,8 +5,18 @@ import { join, extname } from 'path'
 import { existsSync } from 'fs'
 
 // Get assets path based on active directory
-function getAssetsPath(activeDir: string = 'docs'): string {
+function getLocalAssetsPath(activeDir: string = 'docs'): string {
   return join(process.cwd(), activeDir, '_assets')
+}
+
+function getCentralAssetsPath(projectId: string): string {
+  return join(process.cwd(), 'shared-assets', projectId)
+}
+
+function getStrategyFromEnv(input?: string | null) {
+  const fallback = process.env.ASSET_STORAGE === 'centralized' ? 'centralized' : 'local'
+  if (!input) return fallback
+  return input === 'centralized' ? 'centralized' : 'local'
 }
 
 // Supported image extensions
@@ -16,8 +26,8 @@ const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bm
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 // Ensure assets directory exists
-async function ensureAssetsDir(activeDir: string = 'docs') {
-  const assetsPath = getAssetsPath(activeDir)
+async function ensureAssetsDir(path: string) {
+  const assetsPath = path
   if (!existsSync(assetsPath)) {
     await mkdir(assetsPath, { recursive: true })
   }
@@ -44,7 +54,9 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('image') as File
-    const activeDir = formData.get('activeDir') as string || 'docs'
+    const activeDir = (formData.get('activeDir') as string) || 'docs'
+    const projectId = (formData.get('projectId') as string) || 'local-docs'
+    const strategy = getStrategyFromEnv(formData.get('strategy') as string | null)
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
@@ -66,7 +78,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure assets directory exists
-    const assetsPath = await ensureAssetsDir(activeDir)
+    const basePath = strategy === 'centralized' 
+      ? getCentralAssetsPath(projectId) 
+      : getLocalAssetsPath(activeDir)
+    const assetsPath = await ensureAssetsDir(basePath)
 
     // Generate unique filename
     const filename = generateUniqueFilename(assetsPath, file.name)
@@ -80,10 +95,21 @@ export async function POST(request: NextRequest) {
 
     console.log('Image uploaded successfully:', filename, 'to', assetsPath)
 
+    const previewPath = new URLSearchParams({
+      path: filename,
+      activeDir,
+      projectId,
+      strategy,
+    }).toString()
+
+    const relativePath = strategy === 'centralized' 
+      ? `@assets/${projectId}/${filename}` 
+      : `_assets/${filename}`
+
     return NextResponse.json({ 
       success: true, 
-      path: `/api/assets/serve?path=${encodeURIComponent(filename)}&activeDir=${encodeURIComponent(activeDir)}`,
-      relativePath: `_assets/${filename}`,
+      path: `/api/assets/serve?${previewPath}`,
+      relativePath,
       filename,
       size: file.size
     })

@@ -10,6 +10,7 @@ import { FrontmatterEditor } from './FrontmatterEditor'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEffect, useCallback, useState, useMemo, useRef } from 'react'
 import { X, FileText, Save, Users, User, Images, Book, Edit3 } from 'lucide-react'
+import { useProjectStore } from '@/lib/stores/project-store'
 import { Button } from '@/components/ui/button'
 
 type EditorMode = 'collaborative' | 'solo'
@@ -40,6 +41,7 @@ export function EditorArea() {
   const [editorInstanceId, setEditorInstanceId] = useState(0)
   const [activeTab, setActiveTab] = useState('editor')
   const editorRef = useRef<HTMLDivElement>(null)
+  const { activeProject } = useProjectStore()
 
   // Track saving state to prevent race conditions
   const isSavingRef = useRef(false)
@@ -151,7 +153,10 @@ export function EditorArea() {
       setLastSaveTime(null)
       lastSavedContentRef.current = ''
       
-      fetch(`/api/files?path=${encodeURIComponent(selectedFile)}`)
+      const url = activeProject 
+        ? `/api/files?path=${encodeURIComponent(selectedFile)}&projectId=${encodeURIComponent(activeProject)}`
+        : `/api/files?path=${encodeURIComponent(selectedFile)}`
+      fetch(url)
         .then(res => res.json())
         .then(data => {
           if (data.content !== undefined) {
@@ -438,7 +443,7 @@ export function EditorArea() {
             )}
             
             {/* Frontmatter info - will be populated by FrontmatterEditor */}
-            <span id="frontmatter-info" className="flex items-center gap-2"></span>
+            <span id="frontmatter-info" data-path={selectedFile || ''} className="flex items-center gap-2"></span>
           </div>
           
           {/* Right-aligned toggle button */}

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useFileStore } from '@/lib/stores/file-store'
+import { useProjectStore } from '@/lib/stores/project-store'
 
 export function useFileTree() {
   const { 
@@ -13,9 +14,12 @@ export function useFileTree() {
     selectFile 
   } = useFileStore()
 
+  const { activeProject } = useProjectStore()
+
   const fetchFiles = async () => {
     try {
-      const response = await fetch('/api/files')
+      const url = activeProject ? `/api/files?projectId=${encodeURIComponent(activeProject)}` : '/api/files'
+      const response = await fetch(url)
       if (!response.ok) throw new Error('Failed to fetch files')
       const data = await response.json()
       setFiles(data)
@@ -26,7 +30,7 @@ export function useFileTree() {
 
   useEffect(() => {
     fetchFiles()
-  }, [])
+  }, [activeProject])
 
   const filteredFiles = files.filter((file) =>
     file.name.toLowerCase().includes(searchTerm.toLowerCase())

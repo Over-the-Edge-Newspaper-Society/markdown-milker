@@ -9,16 +9,22 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const path = searchParams.get('path')
   const activeDir = searchParams.get('activeDir') || 'docs'
+  const projectId = searchParams.get('projectId') || 'local-docs'
+  const strategy = (searchParams.get('strategy') === 'centralized') || (process.env.ASSET_STORAGE === 'centralized')
   
   if (!path) {
     return NextResponse.json({ error: 'No path provided' }, { status: 400 })
   }
 
   try {
-    const filePath = join(process.cwd(), activeDir, '_assets', path)
+    const filePath = strategy
+      ? join(process.cwd(), 'shared-assets', projectId, path)
+      : join(process.cwd(), activeDir, '_assets', path)
     
     // Security check
-    const assetsDir = join(process.cwd(), activeDir, '_assets')
+    const assetsDir = strategy
+      ? join(process.cwd(), 'shared-assets', projectId)
+      : join(process.cwd(), activeDir, '_assets')
     if (!filePath.startsWith(assetsDir)) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
     }

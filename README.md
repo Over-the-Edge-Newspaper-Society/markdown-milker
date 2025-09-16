@@ -1,3 +1,7 @@
+---
+sidebar:
+  order: 0
+---
 # Markdown Editor
 
 A collaborative markdown editor built with Next.js, Shadcn, and Milkdown.

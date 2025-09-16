@@ -5,7 +5,11 @@ import { join, dirname, extname } from 'path'
 import { existsSync } from 'fs'
 
 // Dynamic function to get the docs path based on settings
-function getDocsPath(): string {
+function getDocsPath(projectId?: string): string {
+  if (projectId) {
+    const projPath = join(process.cwd(), 'projects', projectId, 'src', 'content', 'docs')
+    if (existsSync(projPath)) return projPath
+  }
   // Check if we have a cloned repo
   const repoPath = join(process.cwd(), 'repo')
   if (existsSync(repoPath)) {
@@ -30,6 +34,55 @@ async function ensureDocsDir(docsPath: string) {
   }
 }
 
+function extractSidebarOrderFromFrontmatter(frontmatter: string): number | undefined {
+  const lines = frontmatter.split('\n')
+  let inSidebar = false
+
+  for (const rawLine of lines) {
+    const line = rawLine
+    const trimmed = line.trim()
+
+    if (trimmed === 'sidebar:') {
+      inSidebar = true
+      continue
+    }
+
+    if (inSidebar) {
+      if (!line.startsWith(' ')) {
+        inSidebar = false
+      } else {
+        const orderMatch = line.trim().match(/^order:\s*([^#]+?)(?:\s+#.*)?$/)
+        if (orderMatch) {
+          const value = Number(orderMatch[1].replace(/^['"]|['"]$/g, ''))
+          if (!Number.isNaN(value)) return value
+        }
+      }
+    }
+
+    if (!inSidebar) {
+      const topMatch = trimmed.match(/^order:\s*([^#]+?)(?:\s+#.*)?$/)
+      if (topMatch) {
+        const value = Number(topMatch[1].replace(/^['"]|['"]$/g, ''))
+        if (!Number.isNaN(value)) return value
+      }
+    }
+  }
+
+  return undefined
+}
+
+async function extractSidebarOrder(fullPath: string): Promise<number | undefined> {
+  try {
+    const content = await readFile(fullPath, 'utf-8')
+    const match = content.match(/^---\n([\s\S]*?)\n---/)
+    if (!match) return undefined
+    return extractSidebarOrderFromFrontmatter(match[1])
+  } catch (error) {
+    console.error('Failed to read sidebar order for', fullPath, error)
+    return undefined
+  }
+}
+
 // Security check to prevent path traversal
 function isSecurePath(requestedPath: string, docsPath: string) {
   const fullPath = join(docsPath, requestedPath)
@@ -38,9 +91,10 @@ function isSecurePath(requestedPath: string, docsPath: string) {
 
 // GET - Read file content or list directory
 export async function GET(request: NextRequest) {
-  const DOCS_PATH = getDocsPath()
-  await ensureDocsDir(DOCS_PATH)
   const { searchParams } = new URL(request.url)
+  const projectId = searchParams.get('projectId') || undefined
+  const DOCS_PATH = getDocsPath(projectId)
+  await ensureDocsDir(DOCS_PATH)
   const path = searchParams.get('path')
 
   try {
@@ -95,12 +149,14 @@ export async function GET(request: NextRequest) {
         } else {
           // Only include markdown files
           if (['.md', '.markdown'].includes(extname(file.name).toLowerCase())) {
+            const sidebarOrder = await extractSidebarOrder(fullPath)
             result.push({
               name: file.name,
               path: relativeFilePath,
               type: 'file',
               size: stats.size, // This is the actual file size in bytes from filesystem
-              modified: stats.mtime.toISOString()
+              modified: stats.mtime.toISOString(),
+              sidebarOrder
             })
           }
         }
@@ -128,7 +184,8 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const { path, content, type = 'file' } = body
+    const { path, content, type = 'file', projectId } = body
+    const targetDocsPath = getDocsPath(projectId)
     
     console.log('POST request:', { path, contentLength: content?.length, type })
     
@@ -136,11 +193,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Path is required' }, { status: 400 })
     }
 
-    if (!isSecurePath(path, DOCS_PATH)) {
+    if (!isSecurePath(path, targetDocsPath)) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
     }
 
-    const fullPath = join(DOCS_PATH, path)
+    const fullPath = join(targetDocsPath, path)
     const dir = dirname(fullPath)
 
     // Ensure directory exists
@@ -174,11 +231,12 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Delete file or directory
 export async function DELETE(request: NextRequest) {
-  const DOCS_PATH = getDocsPath()
+  const { searchParams } = new URL(request.url)
+  const projectId = searchParams.get('projectId') || undefined
+  const DOCS_PATH = getDocsPath(projectId)
   await ensureDocsDir(DOCS_PATH)
   
   try {
-    const { searchParams } = new URL(request.url)
     const path = searchParams.get('path')
     
     if (!path || !isSecurePath(path, DOCS_PATH)) {

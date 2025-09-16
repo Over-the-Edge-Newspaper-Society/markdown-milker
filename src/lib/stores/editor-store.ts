@@ -2,6 +2,7 @@
 'use client'
 
 import { create } from 'zustand'
+import { getProjectId, getAssetStrategyClient } from '@/lib/project'
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved'
 
@@ -64,7 +65,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         body: JSON.stringify({
           path: currentFilePath,
           content: currentContent,
-          type: 'file'
+          type: 'file',
+          projectId: getProjectId(),
         }),
       })
 
@@ -102,7 +104,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         body: JSON.stringify({
           path,
           content,
-          type: 'file'
+          type: 'file',
+          projectId: getProjectId(),
         }),
       })
 
@@ -130,7 +133,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         },
         body: JSON.stringify({
           path,
-          type: 'directory'
+          type: 'directory',
+          projectId: getProjectId(),
         }),
       })
 
@@ -158,7 +162,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         },
         body: JSON.stringify({
           sourcePath,
-          targetPath
+          targetPath,
+          projectId: getProjectId(),
         }),
       })
 
@@ -179,7 +184,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   deleteFile: async (path: string) => {
     try {
-      const response = await fetch(`/api/files?path=${encodeURIComponent(path)}`, {
+      const response = await fetch(`/api/files?path=${encodeURIComponent(path)}&projectId=${encodeURIComponent(getProjectId())}`, {
         method: 'DELETE',
       })
 
@@ -200,11 +205,16 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   uploadImage: async (file: File): Promise<string> => {
     const { activeDirectory } = get()
-    
+    const strategy = getAssetStrategyClient()
+    const projectId = getProjectId()
+
     try {
       const formData = new FormData()
       formData.append('image', file)
+      // Backward compatible: still include activeDir for local mode
       formData.append('activeDir', activeDirectory)
+      formData.append('strategy', strategy)
+      formData.append('projectId', projectId)
 
       const response = await fetch('/api/assets/upload', {
         method: 'POST',
@@ -226,9 +236,16 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   getAssetImages: async (): Promise<string[]> => {
     const { activeDirectory } = get()
-    
+    const strategy = getAssetStrategyClient()
+    const projectId = getProjectId()
+
     try {
-      const response = await fetch(`/api/assets?activeDir=${encodeURIComponent(activeDirectory)}`)
+      const params = new URLSearchParams()
+      params.set('activeDir', activeDirectory)
+      params.set('strategy', strategy)
+      params.set('projectId', projectId)
+
+      const response = await fetch(`/api/assets?${params.toString()}`)
 
       if (!response.ok) {
         const errorData = await response.json()

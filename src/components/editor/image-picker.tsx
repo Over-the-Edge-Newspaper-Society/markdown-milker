@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editor-store'
+import { getProjectId, getAssetStrategyClient } from '@/lib/project'
 
 interface ImageAsset {
   name: string
@@ -102,8 +103,15 @@ export const ImagePicker = forwardRef<ImagePickerRef, ImagePickerProps>(({
   const loadAssets = async () => {
     setIsLoading(true)
     try {
-      // Use the updated API with activeDir parameter
-      const response = await fetch(`/api/assets?activeDir=${encodeURIComponent(activeDir)}`)
+      // Use the updated API with strategy and projectId
+      const strategy = getAssetStrategyClient()
+      const projectId = getProjectId()
+      const params = new URLSearchParams({
+        activeDir,
+        strategy,
+        projectId,
+      })
+      const response = await fetch(`/api/assets?${params.toString()}`)
       if (!response.ok) {
         throw new Error('Failed to fetch assets')
       }
@@ -137,10 +145,12 @@ export const ImagePicker = forwardRef<ImagePickerRef, ImagePickerProps>(({
         setUploadProgress(prev => Math.min(prev + 10, 90))
       }, 100)
 
-      // Create FormData with activeDir
+      // Create FormData with activeDir + centralized fields
       const formData = new FormData()
       formData.append('image', file)
       formData.append('activeDir', activeDir)
+      formData.append('strategy', getAssetStrategyClient())
+      formData.append('projectId', getProjectId())
 
       const response = await fetch('/api/assets/upload', {
         method: 'POST',

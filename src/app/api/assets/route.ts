@@ -5,16 +5,26 @@ import { join, extname } from 'path'
 import { existsSync } from 'fs'
 
 // Get assets path based on active directory
-function getAssetsPath(activeDir: string = 'docs'): string {
+function getLocalAssetsPath(activeDir: string = 'docs'): string {
   return join(process.cwd(), activeDir, '_assets')
+}
+
+function getCentralAssetsPath(projectId: string): string {
+  return join(process.cwd(), 'shared-assets', projectId)
+}
+
+function getStrategyFromEnv(input?: string | null) {
+  const fallback = process.env.ASSET_STORAGE === 'centralized' ? 'centralized' : 'local'
+  if (!input) return fallback
+  return input === 'centralized' ? 'centralized' : 'local'
 }
 
 // Supported image extensions
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico']
 
 // Ensure assets directory exists
-async function ensureAssetsDir(activeDir: string = 'docs') {
-  const assetsPath = getAssetsPath(activeDir)
+async function ensureAssetsDir(path: string) {
+  const assetsPath = path
   if (!existsSync(assetsPath)) {
     await mkdir(assetsPath, { recursive: true })
   }
@@ -25,9 +35,15 @@ async function ensureAssetsDir(activeDir: string = 'docs') {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const activeDir = searchParams.get('activeDir') || 'docs'
+  const projectId = searchParams.get('projectId') || 'local-docs'
+  const strategy = getStrategyFromEnv(searchParams.get('strategy'))
   
   try {
-    const assetsPath = await ensureAssetsDir(activeDir)
+    const basePath = strategy === 'centralized'
+      ? getCentralAssetsPath(projectId)
+      : getLocalAssetsPath(activeDir)
+
+    const assetsPath = await ensureAssetsDir(basePath)
     
     if (!existsSync(assetsPath)) {
       return NextResponse.json({ images: [] })
@@ -43,10 +59,20 @@ export async function GET(request: NextRequest) {
           const filePath = join(assetsPath, file.name)
           const stats = await stat(filePath)
           
+          const qs = new URLSearchParams({
+            path: file.name,
+            activeDir,
+            projectId,
+            strategy,
+          }).toString()
+          const relativePath = strategy === 'centralized'
+            ? `@assets/${projectId}/${file.name}`
+            : `_assets/${file.name}`
+
           images.push({
             name: file.name,
-            path: `/api/assets/serve?path=${encodeURIComponent(file.name)}&activeDir=${encodeURIComponent(activeDir)}`,
-            relativePath: `_assets/${file.name}`,
+            path: `/api/assets/serve?${qs}`,
+            relativePath,
             size: stats.size,
             modified: stats.mtime.toISOString(),
             extension: ext

@@ -2,6 +2,7 @@
 'use client'
 
 import { useRef, useCallback, useEffect } from 'react'
+import { transformAssetPathsToStorage } from '@/lib/markdown-preview-transform'
 
 interface UseContentSyncProps {
   getContent: () => string
@@ -18,8 +19,9 @@ export function useContentSync({ getContent, onChange, collaborative, isReady }:
   const saveContent = useCallback(async (content: string, context: string = 'auto'): Promise<boolean> => {
     if (isSavingRef.current || !onChange) return false
     
-    // Basic content cleaning - preserve table structure with <br /> tags
-    let cleanedContent = content
+    // Convert preview URLs back to storage tokens before saving
+    let cleanedContent = transformAssetPathsToStorage(content)
+      // Basic content cleaning - preserve table structure with <br /> tags
       .replace(/<(?!br\s*\/?>)[^>]*>/g, '')  // Remove all HTML tags except <br />
       .replace(/\n{3,}/g, '\n\n')
       .replace(/!\[([^\]]*)\]\(<([^>]+)>\)/g, '![$1]($2)')

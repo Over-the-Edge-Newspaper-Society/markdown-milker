@@ -1,3 +1,7 @@
+---
+sidebar:
+  order: 20
+---
 # Unified Documentation Platform Architecture
 
 ## System Overview

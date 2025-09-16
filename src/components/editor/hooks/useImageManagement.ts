@@ -30,16 +30,22 @@ export function useImageManagement() {
       // User provided a file - upload it normally
       const result = await handleImageUpload(file)
       
-      // Always return the API URL format for proper loading
-      if (result.startsWith('/api/assets/serve?path=')) {
+      // Normalize to API serve URL for editor display
+      if (result.startsWith('/api/assets/serve?')) {
         return result
-      } else if (result.startsWith('_assets/')) {
+      }
+      if (result.startsWith('@assets/')) {
+        // @assets/<projectId>/<file>
+        const [, , pid, ...rest] = result.split('/')
+        const filename = rest.join('/')
+        return `/api/assets/serve?path=${encodeURIComponent(filename)}&projectId=${encodeURIComponent(pid)}&strategy=centralized`
+      }
+      if (result.startsWith('_assets/')) {
         const filename = result.replace('_assets/', '')
         return `/api/assets/serve?path=${encodeURIComponent(filename)}&activeDir=${encodeURIComponent(activeDirectory)}`
-      } else {
-        // Assume it's a filename
-        return `/api/assets/serve?path=${encodeURIComponent(result)}&activeDir=${encodeURIComponent(activeDirectory)}`
       }
+      // Assume it's a bare filename
+      return `/api/assets/serve?path=${encodeURIComponent(result)}&activeDir=${encodeURIComponent(activeDirectory)}`
     } else {
       // No file provided - user wants to browse library
       console.log('📸 Opening image picker for library browsing...')
@@ -286,7 +292,11 @@ export function useImageManagement() {
       // Convert relative path to proper format
       let processedImagePath = imagePath
       
-      if (imagePath.startsWith('_assets/')) {
+      if (imagePath.startsWith('@assets/')) {
+        const [, , pid, ...rest] = imagePath.split('/')
+        const filename = rest.join('/')
+        processedImagePath = `/api/assets/serve?path=${encodeURIComponent(filename)}&projectId=${encodeURIComponent(pid)}&strategy=centralized`
+      } else if (imagePath.startsWith('_assets/')) {
         const filename = imagePath.replace('_assets/', '')
         processedImagePath = `/api/assets/serve?path=${encodeURIComponent(filename)}&activeDir=${encodeURIComponent(activeDirectory)}`
       } else if (!imagePath.startsWith('http') && !imagePath.startsWith('/api/')) {
