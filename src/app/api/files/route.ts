@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readFile, writeFile, readdir, mkdir, stat } from 'fs/promises'
 import { join, dirname, extname } from 'path'
 import { existsSync } from 'fs'
+import { StarlightOrderManager } from '@/lib/starlight-order-manager'
 
 // Dynamic function to get the docs path based on settings
 function getDocsPath(projectId?: string): string {
@@ -34,9 +35,15 @@ async function ensureDocsDir(docsPath: string) {
   }
 }
 
-function extractSidebarOrderFromFrontmatter(frontmatter: string): number | undefined {
+interface SidebarMeta {
+  order?: number
+  hidden?: boolean
+}
+
+function extractSidebarMetaFromFrontmatter(frontmatter: string): SidebarMeta {
   const lines = frontmatter.split('\n')
   let inSidebar = false
+  const result: SidebarMeta = {}
 
   for (const rawLine of lines) {
     const line = rawLine
@@ -54,7 +61,13 @@ function extractSidebarOrderFromFrontmatter(frontmatter: string): number | undef
         const orderMatch = line.trim().match(/^order:\s*([^#]+?)(?:\s+#.*)?$/)
         if (orderMatch) {
           const value = Number(orderMatch[1].replace(/^['"]|['"]$/g, ''))
-          if (!Number.isNaN(value)) return value
+          if (!Number.isNaN(value)) {
+            result.order = value
+          }
+        }
+        const hiddenMatch = line.trim().match(/^hidden:\s*(true|false)/)
+        if (hiddenMatch) {
+          result.hidden = hiddenMatch[1] === 'true'
         }
       }
     }
@@ -63,23 +76,29 @@ function extractSidebarOrderFromFrontmatter(frontmatter: string): number | undef
       const topMatch = trimmed.match(/^order:\s*([^#]+?)(?:\s+#.*)?$/)
       if (topMatch) {
         const value = Number(topMatch[1].replace(/^['"]|['"]$/g, ''))
-        if (!Number.isNaN(value)) return value
+        if (!Number.isNaN(value)) {
+          result.order = value
+        }
+      }
+      const hiddenMatch = trimmed.match(/^hidden:\s*(true|false)/)
+      if (hiddenMatch) {
+        result.hidden = hiddenMatch[1] === 'true'
       }
     }
   }
 
-  return undefined
+  return result
 }
 
-async function extractSidebarOrder(fullPath: string): Promise<number | undefined> {
+async function extractSidebarMeta(fullPath: string): Promise<SidebarMeta> {
   try {
     const content = await readFile(fullPath, 'utf-8')
     const match = content.match(/^---\n([\s\S]*?)\n---/)
-    if (!match) return undefined
-    return extractSidebarOrderFromFrontmatter(match[1])
+    if (!match) return {}
+    return extractSidebarMetaFromFrontmatter(match[1])
   } catch (error) {
     console.error('Failed to read sidebar order for', fullPath, error)
-    return undefined
+    return {}
   }
 }
 
@@ -116,6 +135,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ content })
     }
 
+    await StarlightOrderManager.generateSidebarConfig(DOCS_PATH)
+
     // List files and directories with full paths (not nested structure)
     // The frontend will handle building the tree
     // Exclude _assets folder from file tree
@@ -134,13 +155,21 @@ export async function GET(request: NextRequest) {
         const stats = await stat(fullPath)
         
         if (file.isDirectory()) {
+          let dirMeta: SidebarMeta | undefined
+          const indexPath = join(fullPath, 'index.md')
+          if (existsSync(indexPath)) {
+            dirMeta = await extractSidebarMeta(indexPath)
+          }
+
           // Add directory entry
           result.push({
             name: file.name,
             path: relativeFilePath,
             type: 'directory',
             size: 0,
-            modified: stats.mtime.toISOString()
+            modified: stats.mtime.toISOString(),
+            sidebarOrder: dirMeta?.order,
+            sidebarHidden: dirMeta?.hidden
           })
           
           // Recursively get files from subdirectory
@@ -149,19 +178,20 @@ export async function GET(request: NextRequest) {
         } else {
           // Only include markdown files
           if (['.md', '.markdown'].includes(extname(file.name).toLowerCase())) {
-            const sidebarOrder = await extractSidebarOrder(fullPath)
+            const sidebarMeta = await extractSidebarMeta(fullPath)
             result.push({
               name: file.name,
               path: relativeFilePath,
               type: 'file',
               size: stats.size, // This is the actual file size in bytes from filesystem
               modified: stats.mtime.toISOString(),
-              sidebarOrder
+              sidebarOrder: sidebarMeta.order,
+              sidebarHidden: sidebarMeta.hidden
             })
           }
         }
       }
-      
+
       return result
     }
 

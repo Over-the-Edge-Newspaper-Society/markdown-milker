@@ -11,6 +11,7 @@ export interface FileNode {
   size?: number
   modified?: string
   sidebarOrder?: number
+  sidebarHidden?: boolean
 }
 
 interface FileStore {

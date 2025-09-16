@@ -324,21 +324,23 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           {/* Editor Preferences Section */}
           <div className="space-y-3">
             <h4 className="font-medium text-sm">Editor Preferences</h4>
-            
+
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-center justify-between">
+              <div className="space-y-1">
                 <Label className="text-sm">Auto-save</Label>
-                <input
-                  type="checkbox"
-                  checked={settings.editor.autoSave}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    editor: { ...prev.editor, autoSave: e.target.checked }
-                  }))}
-                  className="h-4 w-4"
-                />
+                <div className="flex items-center h-8">
+                  <input
+                    type="checkbox"
+                    checked={settings.editor.autoSave}
+                    onChange={(e) => setSettings(prev => ({
+                      ...prev,
+                      editor: { ...prev.editor, autoSave: e.target.checked }
+                    }))}
+                    className="h-4 w-4"
+                  />
+                </div>
               </div>
-              
+
               <div className="space-y-1">
                 <Label className="text-sm">Theme</Label>
                 <select
@@ -368,6 +370,29 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               >
                 <option value="solo">Solo Mode (work independently)</option>
                 <option value="collaborative">Collaborative Mode (real-time sharing)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* File Tree Section */}
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">File Tree</h4>
+
+            <div className="space-y-1">
+              <Label className="text-sm">File Name Display</Label>
+              <select
+                value={settings.fileTree?.fileNameDisplay || 'truncate'}
+                onChange={(e) => setSettings(prev => ({
+                  ...prev,
+                  fileTree: {
+                    ...prev.fileTree,
+                    fileNameDisplay: e.target.value as 'truncate' | 'wrap'
+                  }
+                }))}
+                className="w-full h-8 px-2 border rounded-md text-sm bg-background dark:bg-background"
+              >
+                <option value="truncate">Truncate (with ...)</option>
+                <option value="wrap">Wrap to multiple lines</option>
               </select>
             </div>
           </div>

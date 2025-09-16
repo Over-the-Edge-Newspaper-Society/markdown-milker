@@ -308,207 +308,192 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
 
   return (
     <div className={`border-b bg-muted/30 ${className} ${inlineMode ? 'border-t' : ''}`}>
-      <div className="p-3 space-y-3">
+      <div className="p-2 space-y-2">
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(false)}
-            className="h-6 px-1"
+            className="h-5 px-1 py-0"
           >
-            <ChevronDown className="w-4 h-4 mr-2" />
-            <span className="text-sm font-medium">Frontmatter</span>
+            <ChevronDown className="w-3 h-3 mr-1" />
+            <span className="text-xs font-medium">Frontmatter</span>
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="fm-title" className="text-xs">Title</Label>
-            <Input
-              id="fm-title"
-              placeholder="Page title"
-              value={frontmatterData.title || ''}
-              onChange={(e) => updateContent({ title: e.target.value })}
-              className="h-8 text-sm"
-            />
-          </div>
+        <div className="space-y-2">
+          <Input
+            id="fm-title"
+            placeholder="Title"
+            value={frontmatterData.title || ''}
+            onChange={(e) => updateContent({ title: e.target.value })}
+            className="h-7 text-xs w-full"
+          />
 
-          <div className="space-y-1">
-            <Label htmlFor="fm-order" className="text-xs">Sidebar Order</Label>
+          <div className="flex gap-1">
             <Input
               id="fm-order"
               type="number"
-              placeholder="1"
+              placeholder="Order"
               value={frontmatterData.sidebar?.order || ''}
-              onChange={(e) => updateContent({ 
-                sidebar: { 
-                  ...frontmatterData.sidebar, 
-                  order: e.target.value ? Number(e.target.value) : undefined 
+              onChange={(e) => updateContent({
+                sidebar: {
+                  ...frontmatterData.sidebar,
+                  order: e.target.value ? Number(e.target.value) : undefined
                 }
               })}
-              className="h-8 text-sm"
+              className="h-7 text-xs w-20"
             />
-            <div className="flex gap-2 mt-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7"
-                onClick={() => {
-                  const order = calculateSmartOrder(selectedFile || '')
-                  if (order !== undefined) {
-                    updateContent({ sidebar: { ...frontmatterData.sidebar, order } })
-                  }
-                }}
-              >
-                Auto-calc
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7"
-                onClick={async () => {
-                  const pathParts = (selectedFile || '').split('/')
-                  const dir = pathParts.slice(0, -1).join('/')
-                  try {
-                    const res = await fetch('/api/starlight/rebalance', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ directory: dir, projectId: activeProject || undefined })
-                    })
-                    if (res.ok) {
-                      const url = activeProject ? `/api/files?projectId=${encodeURIComponent(activeProject)}` : '/api/files'
-                      try {
-                        const refreshed = await fetch(url)
-                        if (refreshed.ok) {
-                          const data = await refreshed.json()
-                          setFiles(data)
-                        }
-                      } catch (err) {
-                        console.error('Failed to refresh files after rebalance:', err)
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              title="Auto-calculate order"
+              onClick={() => {
+                const order = calculateSmartOrder(selectedFile || '')
+                if (order !== undefined) {
+                  updateContent({ sidebar: { ...frontmatterData.sidebar, order } })
+                }
+              }}
+            >
+              Auto
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              title="Fix all order conflicts"
+              onClick={async () => {
+                const pathParts = (selectedFile || '').split('/')
+                const dir = pathParts.slice(0, -1).join('/')
+                try {
+                  const res = await fetch('/api/starlight/rebalance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ directory: dir, projectId: activeProject || undefined })
+                  })
+                  if (res.ok) {
+                    const url = activeProject ? `/api/files?projectId=${encodeURIComponent(activeProject)}` : '/api/files'
+                    try {
+                      const refreshed = await fetch(url)
+                      if (refreshed.ok) {
+                        const data = await refreshed.json()
+                        setFiles(data)
                       }
-                      ;(globalThis as any).__FM_CACHE__ = new Map()
-                      alert('Fixed all order conflicts in the directory')
-                    } else {
-                      alert('Rebalance failed')
+                    } catch (err) {
+                      console.error('Failed to refresh files after rebalance:', err)
                     }
-                  } catch {
-                    alert('Failed to trigger rebalance')
+                    ;(globalThis as any).__FM_CACHE__ = new Map()
+                    alert('Fixed all order conflicts in the directory')
+                  } else {
+                    alert('Rebalance failed')
                   }
-                }}
-              >
-                Fix All
-              </Button>
-            </div>
-          </div>
-        </div>
+                } catch {
+                  alert('Failed to trigger rebalance')
+                }
+              }}
+            >
+              Fix
+            </Button>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="fm-label" className="text-xs">Sidebar Label</Label>
             <Input
               id="fm-label"
-              placeholder="Custom label (optional)"
+              placeholder="Sidebar label"
               value={frontmatterData.sidebar?.label || ''}
-              onChange={(e) => updateContent({ 
-                sidebar: { 
-                  ...frontmatterData.sidebar, 
+              onChange={(e) => updateContent({
+                sidebar: {
+                  ...frontmatterData.sidebar,
                   label: e.target.value || undefined
                 }
               })}
-              className="h-8 text-sm"
+              className="h-7 text-xs flex-1"
             />
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Hidden in Sidebar</Label>
-            <div className="h-8 flex items-center">
-              <input
-                type="checkbox"
-                checked={!!frontmatterData.sidebar?.hidden}
-                onChange={(e) => updateContent({
-                  sidebar: {
-                    ...frontmatterData.sidebar,
-                    hidden: e.target.checked || undefined
+
+          <div className="flex gap-1 items-center">
+            <input
+              type="checkbox"
+              checked={!!frontmatterData.sidebar?.hidden}
+              onChange={(e) => updateContent({
+                sidebar: {
+                  ...frontmatterData.sidebar,
+                  hidden: e.target.checked || undefined
+                }
+              })}
+              className="h-3.5 w-3.5"
+            />
+            <span className="text-xs whitespace-nowrap mr-3">Hide</span>
+
+            <span className="text-xs text-muted-foreground">Badge:</span>
+            <Input
+              placeholder="Text"
+              value={frontmatterData.sidebar?.badge?.text || ''}
+              onChange={(e) => updateContent({
+                sidebar: {
+                  ...frontmatterData.sidebar,
+                  badge: {
+                    ...(frontmatterData.sidebar?.badge || {}),
+                    text: e.target.value || undefined,
                   }
-                })}
-                className="h-4 w-4"
-              />
-              <span className="text-xs text-muted-foreground ml-2">Hide page from sidebar</span>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Badge</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="Text"
-                value={frontmatterData.sidebar?.badge?.text || ''}
-                onChange={(e) => updateContent({
-                  sidebar: {
-                    ...frontmatterData.sidebar,
-                    badge: {
-                      ...(frontmatterData.sidebar?.badge || {}),
-                      text: e.target.value || undefined,
-                    }
+                }
+              })}
+              className="h-7 text-xs flex-1"
+            />
+            <select
+              value={frontmatterData.sidebar?.badge?.variant || 'default'}
+              onChange={(e) => updateContent({
+                sidebar: {
+                  ...frontmatterData.sidebar,
+                  badge: {
+                    ...(frontmatterData.sidebar?.badge || {}),
+                    variant: e.target.value as any
                   }
-                })}
-                className="h-8 text-sm"
-              />
-              <select
-                value={frontmatterData.sidebar?.badge?.variant || 'default'}
-                onChange={(e) => updateContent({
-                  sidebar: {
-                    ...frontmatterData.sidebar,
-                    badge: {
-                      ...(frontmatterData.sidebar?.badge || {}),
-                      variant: e.target.value as any
-                    }
-                  }
-                })}
-                className="h-8 text-sm border rounded px-2 bg-background"
-              >
-                <option value="default">default</option>
-                <option value="note">note</option>
-                <option value="tip">tip</option>
-                <option value="caution">caution</option>
-                <option value="danger">danger</option>
-                <option value="success">success</option>
-              </select>
-            </div>
+                }
+              })}
+              className="h-7 text-xs border rounded px-2 bg-background"
+              title="Badge style"
+            >
+              <option value="default">default</option>
+              <option value="note">note</option>
+              <option value="tip">tip</option>
+              <option value="caution">caution</option>
+              <option value="danger">danger</option>
+              <option value="success">success</option>
+            </select>
           </div>
         </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="fm-description" className="text-xs">Description</Label>
-          <Textarea
+        <div>
+          <Input
             id="fm-description"
-            placeholder="Page description for SEO and navigation"
+            placeholder="Description (for SEO and navigation)"
             value={frontmatterData.description || ''}
             onChange={(e) => updateContent({ description: e.target.value })}
-            className="min-h-16 text-sm resize-none"
+            className="h-7 text-xs"
           />
         </div>
 
         {customFields.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-xs">Custom Fields</Label>
+          <div className="space-y-1">
             {customFields.map((field, index) => (
-              <div key={index} className="flex gap-2">
+              <div key={index} className="flex gap-1">
                 <Input
                   placeholder="Key"
                   value={field.key}
                   onChange={(e) => updateCustomField(index, e.target.value, field.value)}
-                  className="h-8 text-sm flex-1"
+                  className="h-7 text-xs flex-1"
                 />
                 <Input
                   placeholder="Value"
                   value={field.value}
                   onChange={(e) => updateCustomField(index, field.key, e.target.value)}
-                  className="h-8 text-sm flex-1"
+                  className="h-7 text-xs flex-1"
                 />
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => removeCustomField(index)}
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 p-0"
                 >
                   <Trash2 className="w-3 h-3" />
                 </Button>
@@ -521,7 +506,7 @@ export const FrontmatterEditor = ({ content, onChange, className, inlineMode = f
           variant="outline"
           size="sm"
           onClick={addCustomField}
-          className="h-8"
+          className="h-6 px-2 text-xs"
         >
           <Plus className="w-3 h-3 mr-1" />
           Add Field

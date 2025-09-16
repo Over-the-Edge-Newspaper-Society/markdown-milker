@@ -12,6 +12,9 @@ interface AppSettings {
     theme: 'light' | 'dark' | 'system';
     defaultMode: 'solo' | 'collaborative';
   };
+  fileTree: {
+    fileNameDisplay: 'truncate' | 'wrap';
+  };
 }
 
 export class SettingsManager {
@@ -57,6 +60,9 @@ export class SettingsManager {
         autoSave: true,
         theme: 'system',
         defaultMode: 'solo'
+      },
+      fileTree: {
+        fileNameDisplay: 'truncate'
       }
     };
   }

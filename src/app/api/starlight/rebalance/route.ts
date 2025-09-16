@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Directory not found', targetDir }, { status: 404 })
     }
 
-    const count = await StarlightOrderManager.rebalanceDirectory(targetDir)
+    const count = await StarlightOrderManager.rebalanceDirectory(targetDir, docsRoot)
     return NextResponse.json({ success: true, updated: count, targetDir })
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error?.message || 'Rebalance failed' }, { status: 500 })

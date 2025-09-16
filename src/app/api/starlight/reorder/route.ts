@@ -22,10 +22,10 @@ function getDocsPath(projectId?: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { directory = '', orderedFiles, projectId } = await request.json()
+    const { directory = '', orderedItems, projectId } = await request.json()
 
-    if (!Array.isArray(orderedFiles)) {
-      return NextResponse.json({ success: false, error: 'orderedFiles must be an array' }, { status: 400 })
+    if (!Array.isArray(orderedItems)) {
+      return NextResponse.json({ success: false, error: 'orderedItems must be an array' }, { status: 400 })
     }
 
     const docsRoot = getDocsPath(projectId)
@@ -35,7 +35,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Directory not found', targetDir }, { status: 404 })
     }
 
-    const updated = await StarlightOrderManager.applyManualOrder(targetDir, orderedFiles)
+    const normalized = orderedItems
+      .map((item: any) => ({
+        name: typeof item?.name === 'string' ? item.name : undefined,
+        type: item?.type === 'directory' ? 'directory' : 'file'
+      }))
+      .filter((item: { name?: string; type: 'file' | 'directory' }) => Boolean(item.name)) as { name: string; type: 'file' | 'directory' }[]
+
+    const updated = await StarlightOrderManager.applyManualOrder(targetDir, normalized, docsRoot)
 
     return NextResponse.json({ success: true, updated, targetDir })
   } catch (error: any) {

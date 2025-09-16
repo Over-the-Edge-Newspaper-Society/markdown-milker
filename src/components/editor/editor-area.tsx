@@ -383,15 +383,6 @@ export function EditorArea() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={openEditorImagePicker}
-              className="h-7 px-2"
-              title="Images"
-            >
-              <Images className="h-3.5 w-3.5" />
-            </Button>
             <button
               onClick={manualSave}
               disabled={isManualSaving || isSavingRef.current}

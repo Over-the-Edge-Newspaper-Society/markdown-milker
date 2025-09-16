@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useState, useRef, useCallback, useEffect } from 'react'
+import { SettingsManager } from '@/lib/settings'
 import { 
   FileIcon, 
   FolderIcon, 
@@ -31,6 +32,7 @@ interface FileNode {
   modified?: string
   level?: number
   sidebarOrder?: number
+  sidebarHidden?: boolean
 }
 
 interface DraggableFileItemProps {
@@ -49,6 +51,8 @@ interface DraggableFileItemProps {
   onMoveDown?: () => void
   canMoveUp?: boolean
   canMoveDown?: boolean
+  hidden?: boolean
+  onToggleHidden?: (nextHidden: boolean) => void
 }
 
 export function DraggableFileItem({ 
@@ -66,7 +70,9 @@ export function DraggableFileItem({
   onMoveUp,
   onMoveDown,
   canMoveUp = false,
-  canMoveDown = false
+  canMoveDown = false,
+  hidden,
+  onToggleHidden
 }: DraggableFileItemProps) {
   const [isDragging, setIsDragging] = useState(false)
   const dragPreviewRef = useRef<HTMLDivElement | null>(null)
@@ -76,6 +82,10 @@ export function DraggableFileItem({
     hidden?: boolean
     badge?: { text?: string; variant?: string }
   } | null>(null)
+
+  // Get file name display setting
+  const settings = SettingsManager.getSettings()
+  const fileNameDisplay = settings?.fileTree?.fileNameDisplay || 'truncate'
   
   const hasChildren = node.children && node.children.length > 0
   const isDirectory = node.type === 'directory'
@@ -225,10 +235,21 @@ export function DraggableFileItem({
   }
 
   useEffect(() => {
-    if (node.type === 'file' && node.sidebarOrder !== undefined) {
+    if (node.sidebarOrder !== undefined) {
       setFmMeta((prev) => ({ ...(prev || {}), order: node.sidebarOrder }))
     }
-  }, [node.sidebarOrder, node.type])
+    if (node.sidebarHidden !== undefined) {
+      setFmMeta((prev) => ({ ...(prev || {}), hidden: node.sidebarHidden }))
+    }
+  }, [node.sidebarOrder, node.sidebarHidden])
+
+  useEffect(() => {
+    if (typeof hidden === 'boolean') {
+      setFmMeta((prev) => ({ ...(prev || {}), hidden }))
+    }
+  }, [hidden])
+
+  const effectiveHidden = fmMeta?.hidden ?? hidden ?? false
 
   // Calculate indentation and tree lines
   const baseIndent = 8
@@ -294,7 +315,7 @@ export function DraggableFileItem({
           <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab active:cursor-grabbing" />
         </div>
 
-        {node.type === 'file' && (onMoveUp || onMoveDown) && (
+        {(onMoveUp || onMoveDown) && (
           <div className="flex flex-col -ml-1 mr-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
               variant="ghost"
@@ -350,22 +371,59 @@ export function DraggableFileItem({
           )}
         </div>
 
-        {/* Name + indicators (left) */}
-        <div className="flex items-center gap-2 min-w-0 flex-[1_1_auto]">
-          <span className="text-sm truncate select-none max-w-[80px] sm:max-w-[120px]">{node.name}</span>
-          {!isDirectory && fmMeta?.order !== undefined && (
-            <span className="text-[10px] bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-1 rounded whitespace-nowrap">#{fmMeta.order}</span>
-          )}
-          {!isDirectory && fmMeta?.label && (
-            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">"{fmMeta.label}"</span>
-          )}
-          {!isDirectory && fmMeta?.badge?.text && (
-            <span className="text-[10px] px-1 rounded border opacity-80 whitespace-nowrap" style={{ borderColor: 'var(--border)'}}>
-              {fmMeta.badge.text}
-            </span>
-          )}
-          {!isDirectory && fmMeta?.hidden && (
-            <span className="text-[10px] px-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">hidden</span>
+        {/* Name + indicators (vertical layout) */}
+        <div className="flex flex-col min-w-0 flex-[1_1_auto] gap-1">
+          {/* File/folder name */}
+          <span
+            className={`text-sm select-none ${
+              fileNameDisplay === 'wrap'
+                ? 'break-words leading-tight'
+                : 'truncate'
+            }`}
+            title={node.name}
+          >
+            {node.name}
+          </span>
+
+          {/* Metadata line (only show if there are any indicators) */}
+          {(fmMeta?.order !== undefined ||
+            (!isDirectory && fmMeta?.label) ||
+            (!isDirectory && fmMeta?.badge?.text) ||
+            onToggleHidden ||
+            effectiveHidden) && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {fmMeta?.order !== undefined && (
+                <span className="text-[10px] bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-1 rounded whitespace-nowrap">#{fmMeta.order}</span>
+              )}
+              {!isDirectory && fmMeta?.label && (
+                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">"{fmMeta.label}"</span>
+              )}
+              {!isDirectory && fmMeta?.badge?.text && (
+                <span className="text-[10px] px-1 rounded border opacity-80 whitespace-nowrap" style={{ borderColor: 'var(--border)'}}>
+                  {fmMeta.badge.text}
+                </span>
+              )}
+              {onToggleHidden ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleHidden(!effectiveHidden)
+                  }}
+                  className={`text-[10px] px-1 rounded border whitespace-nowrap transition-colors ${
+                    effectiveHidden
+                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-transparent'
+                      : 'text-muted-foreground hover:bg-muted/60 border-muted'
+                  }`}
+                >
+                  {effectiveHidden ? 'Show' : 'Hide'}
+                </button>
+              ) : (
+                effectiveHidden && (
+                  <span className="text-[10px] px-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">hidden</span>
+                )
+              )}
+            </div>
           )}
         </div>
 

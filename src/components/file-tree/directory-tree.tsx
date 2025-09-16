@@ -22,6 +22,7 @@ interface FileNode {
   modified?: string
   level?: number
   sidebarOrder?: number
+  sidebarHidden?: boolean
 }
 
 export function EnhancedDirectoryTree() {
@@ -45,11 +46,10 @@ export function EnhancedDirectoryTree() {
       const pathParts = file.path.split('/')
       let currentPath = ''
       let currentLevel = tree
-      let level = 0
 
       pathParts.forEach((part, index) => {
+        const previousPath = currentPath
         currentPath = currentPath ? `${currentPath}/${part}` : part
-        level = index
         
         let existingNode = nodeMap.get(currentPath)
         
@@ -62,11 +62,11 @@ export function EnhancedDirectoryTree() {
             children: isLastPart && file.type === 'directory' ? [] : undefined,
             size: file.size,
             modified: file.modified,
-            level,
-            sidebarOrder: isLastPart ? file.sidebarOrder : undefined
+            level: index,
+            sidebarOrder: isLastPart ? file.sidebarOrder : undefined,
+            sidebarHidden: isLastPart ? file.sidebarHidden : undefined
           }
           
-          // Only add children array for directories
           if (existingNode.type === 'directory' && !existingNode.children) {
             existingNode.children = []
           }
@@ -76,8 +76,19 @@ export function EnhancedDirectoryTree() {
         }
 
         const isLastPart = index === pathParts.length - 1
-        if (isLastPart && file.type === 'file' && file.sidebarOrder !== undefined) {
+        if (isLastPart && file.type === 'file') {
           existingNode.sidebarOrder = file.sidebarOrder
+          existingNode.sidebarHidden = file.sidebarHidden
+
+          if (part === 'index.md' && previousPath) {
+            const parentNode = nodeMap.get(previousPath)
+            if (parentNode) {
+              parentNode.sidebarOrder = file.sidebarOrder
+              if (file.sidebarHidden !== undefined) {
+                parentNode.sidebarHidden = file.sidebarHidden
+              }
+            }
+          }
         }
         
         if (existingNode.children && index < pathParts.length - 1) {
@@ -195,12 +206,12 @@ export function EnhancedDirectoryTree() {
     }
   }
 
-  const reorderDirectory = useCallback(async (directory: string, orderedFiles: string[]) => {
+  const reorderDirectory = useCallback(async (directory: string, orderedItems: { type: 'file' | 'directory'; name: string }[]) => {
     try {
       const res = await fetch('/api/starlight/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directory, orderedFiles, projectId: activeProject || undefined })
+        body: JSON.stringify({ directory, orderedItems, projectId: activeProject || undefined })
       })
 
       if (res.ok) {
@@ -214,6 +225,35 @@ export function EnhancedDirectoryTree() {
       }
     } catch (error) {
       toast({ title: 'Reorder error', description: (error as Error).message, variant: 'error' })
+    }
+  }, [activeProject, refreshFiles])
+
+  const toggleHiddenState = useCallback(async (node: FileNode, nextHidden: boolean) => {
+    const targetPath = node.type === 'directory'
+      ? (node.path ? `${node.path}/index.md` : 'index.md')
+      : node.path
+
+    if (!targetPath) {
+      return
+    }
+
+    try {
+      const res = await fetch('/api/starlight/visibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: targetPath, hidden: nextHidden, projectId: activeProject || undefined })
+      })
+
+      if (res.ok) {
+        toast({ title: nextHidden ? 'Hidden in sidebar' : 'Shown in sidebar', description: node.name, variant: 'success' })
+        ;(globalThis as any).__FM_CACHE__ = new Map()
+        await refreshFiles()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast({ title: 'Visibility update failed', description: err.error || 'Unknown error', variant: 'error' })
+      }
+    } catch (error) {
+      toast({ title: 'Visibility error', description: (error as Error).message, variant: 'error' })
     }
   }, [activeProject, refreshFiles])
 
@@ -251,25 +291,21 @@ export function EnhancedDirectoryTree() {
   }
 
   const handleOrderMove = useCallback(async (node: FileNode, direction: 'up' | 'down', levelNodes: FileNode[]) => {
-    if (node.type !== 'file' || node.name === 'index.md') {
-      return
-    }
-
-    const siblings = levelNodes.filter((n) => n.type === 'file')
-    const currentIndex = siblings.findIndex((n) => n.path === node.path)
+    const orderable = levelNodes.filter((n) => n.type === 'directory' || (n.type === 'file' && n.name !== 'index.md'))
+    const currentIndex = orderable.findIndex((n) => n.path === node.path)
     if (currentIndex === -1) return
 
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
-    if (targetIndex < 0 || targetIndex >= siblings.length) return
+    if (targetIndex < 0 || targetIndex >= orderable.length) return
 
-    const ordered = [...siblings]
+    const ordered = [...orderable]
     const [moved] = ordered.splice(currentIndex, 1)
     ordered.splice(targetIndex, 0, moved)
 
     const parentPath = node.path.includes('/') ? node.path.split('/').slice(0, -1).join('/') : ''
-    const orderedNames = ordered.map((sibling) => sibling.name)
+    const orderedItems = ordered.map((item) => ({ type: item.type, name: item.name }))
 
-    await reorderDirectory(parentPath, orderedNames)
+    await reorderDirectory(parentPath, orderedItems)
   }, [reorderDirectory])
 
   const handleDragOver = useCallback((e: React.DragEvent, path: string, isDirectory: boolean) => {
@@ -358,41 +394,71 @@ export function EnhancedDirectoryTree() {
   // Filter tree based on search
   const filteredTree = useMemo(() => {
     if (!searchTerm) return fileTree
-    
+
     const filterTree = (nodes: FileNode[]): FileNode[] => {
       return nodes.reduce((acc, node) => {
         const matchesSearch = node.name.toLowerCase().includes(searchTerm.toLowerCase())
         const filteredChildren = node.children ? filterTree(node.children) : []
-        
+
         if (matchesSearch || filteredChildren.length > 0) {
           acc.push({
             ...node,
             children: filteredChildren.length > 0 ? filteredChildren : node.children
           })
-          
-          // Auto-expand matching folders
-          if (node.type === 'directory' && (matchesSearch || filteredChildren.length > 0)) {
-            setExpandedFolders(prev => new Set([...prev, node.path]))
-          }
         }
-        
+
         return acc
       }, [] as FileNode[])
     }
-    
+
     return filterTree(fileTree)
   }, [fileTree, searchTerm])
 
+  // Auto-expand folders that match search
+  React.useEffect(() => {
+    if (!searchTerm) return
+
+    const pathsToExpand: string[] = []
+
+    const checkNodes = (nodes: FileNode[]): void => {
+      nodes.forEach(node => {
+        const matchesSearch = node.name.toLowerCase().includes(searchTerm.toLowerCase())
+
+        if (node.children) {
+          const hasMatchingChildren = node.children.some(child =>
+            child.name.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+
+          if (node.type === 'directory' && (matchesSearch || hasMatchingChildren)) {
+            pathsToExpand.push(node.path)
+          }
+
+          checkNodes(node.children)
+        }
+      })
+    }
+
+    checkNodes(fileTree)
+
+    if (pathsToExpand.length > 0) {
+      setExpandedFolders(prev => {
+        const newSet = new Set(prev)
+        pathsToExpand.forEach(path => newSet.add(path))
+        return newSet
+      })
+    }
+  }, [searchTerm, fileTree])
+
   const renderFileTree = (nodes: FileNode[], level: number = 0): React.ReactNode => {
-    const fileNodes = nodes.filter((n) => n.type === 'file')
+    const orderableNodes = nodes.filter((n) => n.type === 'directory' || (n.type === 'file' && n.name !== 'index.md'))
 
     return nodes.map((node, index) => {
       const isExpanded = expandedFolders.has(node.path)
       const isSelected = selectedFile === node.path
       const isDragOver = dragOverPath === node.path
-      const fileIndex = node.type === 'file' ? fileNodes.findIndex((n) => n.path === node.path) : -1
-      const canMoveUp = node.type === 'file' && node.name !== 'index.md' && fileIndex > 0
-      const canMoveDown = node.type === 'file' && node.name !== 'index.md' && fileIndex > -1 && fileIndex < fileNodes.length - 1
+      const orderIndex = orderableNodes.findIndex((n) => n.path === node.path)
+      const canMoveUp = orderIndex > 0
+      const canMoveDown = orderIndex > -1 && orderIndex < orderableNodes.length - 1
       
       return (
         <div key={node.path}>
@@ -412,6 +478,8 @@ export function EnhancedDirectoryTree() {
             onMoveDown={canMoveDown ? () => handleOrderMove(node, 'down', nodes) : undefined}
             canMoveUp={canMoveUp}
             canMoveDown={canMoveDown}
+            hidden={node.sidebarHidden}
+            onToggleHidden={(next) => toggleHiddenState(node, next)}
           />
           
           {/* Render children if expanded */}

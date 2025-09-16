@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Markdown Milker',
   description: 'A modern Markdown editor built with Next.js and Milkdown',
+  icons: {
+    icon: '/icon.gif',
+  },
 }
 
 export default function RootLayout({
