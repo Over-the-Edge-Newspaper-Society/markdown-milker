@@ -9,6 +9,7 @@ import { FileCreationDialog, QuickCreateButtons } from './file-creation-dialog'
 import { DraggableFileItem } from './draggable-file-item'
 import { useFileTree } from '@/lib/hooks/use-file-tree'
 import { useEditorStore } from '@/lib/stores/editor-store'
+import { useFileStore } from '@/lib/stores/file-store'
 import { cn } from '@/lib/utils'
 import { toast } from '@/components/ui/use-toast'
 import { useProjectStore } from '@/lib/stores/project-store'
@@ -23,15 +24,17 @@ interface FileNode {
   level?: number
   sidebarOrder?: number
   sidebarHidden?: boolean
+  indexFilePath?: string
 }
 
 export function EnhancedDirectoryTree() {
-  const { files, searchTerm, setSearchTerm, selectedFile, selectFile, refreshFiles } = useFileTree()
+  const { files, allFiles, searchTerm, setSearchTerm, selectedFile, selectFile, refreshFiles } = useFileTree()
   const { createFile, createDirectory, moveFile } = useEditorStore()
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['']))
   const [dragOverPath, setDragOverPath] = useState<string | null>(null)
   const [isRootDragOver, setIsRootDragOver] = useState(false)
   const { activeProject } = useProjectStore()
+  const setFiles = useFileStore((state) => state.setFiles)
 
   // Build nested tree structure from flat file list
   const fileTree = useMemo(() => {
@@ -47,14 +50,28 @@ export function EnhancedDirectoryTree() {
       let currentPath = ''
       let currentLevel = tree
 
+      const isIndexFile = file.type === 'file' && /index\.(md|mdx)$/i.test(file.name)
+
       pathParts.forEach((part, index) => {
         const previousPath = currentPath
         currentPath = currentPath ? `${currentPath}/${part}` : part
-        
+
         let existingNode = nodeMap.get(currentPath)
-        
+
         if (!existingNode) {
           const isLastPart = index === pathParts.length - 1
+          const shouldSkip = isLastPart && isIndexFile
+          if (shouldSkip) {
+            const parentNode = previousPath ? nodeMap.get(previousPath) : undefined
+            if (parentNode) {
+              parentNode.sidebarOrder = file.sidebarOrder
+              if (file.sidebarHidden !== undefined) {
+                parentNode.sidebarHidden = file.sidebarHidden
+              }
+              parentNode.indexFilePath = file.path
+            }
+            return
+          }
           existingNode = {
             name: part,
             path: currentPath,
@@ -64,9 +81,10 @@ export function EnhancedDirectoryTree() {
             modified: file.modified,
             level: index,
             sidebarOrder: isLastPart ? file.sidebarOrder : undefined,
-            sidebarHidden: isLastPart ? file.sidebarHidden : undefined
+            sidebarHidden: isLastPart ? file.sidebarHidden : undefined,
+            indexFilePath: undefined
           }
-          
+
           if (existingNode.type === 'directory' && !existingNode.children) {
             existingNode.children = []
           }
@@ -80,17 +98,18 @@ export function EnhancedDirectoryTree() {
           existingNode.sidebarOrder = file.sidebarOrder
           existingNode.sidebarHidden = file.sidebarHidden
 
-          if (part === 'index.md' && previousPath) {
+          if (/index\.(md|mdx)$/i.test(part) && previousPath) {
             const parentNode = nodeMap.get(previousPath)
             if (parentNode) {
               parentNode.sidebarOrder = file.sidebarOrder
               if (file.sidebarHidden !== undefined) {
                 parentNode.sidebarHidden = file.sidebarHidden
               }
+              parentNode.indexFilePath = file.path
             }
           }
         }
-        
+
         if (existingNode.children && index < pathParts.length - 1) {
           currentLevel = existingNode.children
         }
@@ -161,8 +180,21 @@ export function EnhancedDirectoryTree() {
 
     sortNodes(tree)
 
-    return tree
+    const pruneIndexFiles = (nodes: FileNode[]): FileNode[] => {
+      return nodes
+        .filter((node) => !(node.type === 'file' && /index\.(md|mdx)$/i.test(node.name)))
+        .map((node) => {
+          if (node.children) {
+            node.children = pruneIndexFiles(node.children)
+          }
+          return node
+        })
+    }
+
+    return pruneIndexFiles(tree)
   }, [files])
+
+  const allFilePaths = useMemo(() => new Set(allFiles.map((file) => file.path)), [allFiles])
 
   const toggleFolder = useCallback((path: string) => {
     setExpandedFolders(prev => {
@@ -229,9 +261,18 @@ export function EnhancedDirectoryTree() {
   }, [activeProject, refreshFiles])
 
   const toggleHiddenState = useCallback(async (node: FileNode, nextHidden: boolean) => {
-    const targetPath = node.type === 'directory'
-      ? (node.path ? `${node.path}/index.md` : 'index.md')
-      : node.path
+    let targetPath: string | undefined
+
+    if (node.type === 'directory') {
+      targetPath = node.indexFilePath
+      if (!targetPath) {
+        const base = node.path ? `${node.path}/index` : 'index'
+        const candidates = [`${base}.md`, `${base}.mdx`]
+        targetPath = candidates.find((candidate) => allFilePaths.has(candidate))
+      }
+    } else {
+      targetPath = node.path
+    }
 
     if (!targetPath) {
       return
@@ -246,6 +287,17 @@ export function EnhancedDirectoryTree() {
 
       if (res.ok) {
         toast({ title: nextHidden ? 'Hidden in sidebar' : 'Shown in sidebar', description: node.name, variant: 'success' })
+        const { files: currentFiles } = useFileStore.getState()
+        const updatedFiles = currentFiles.map((file) => {
+          if (file.path === targetPath) {
+            return { ...file, sidebarHidden: nextHidden }
+          }
+          if (node.type === 'directory' && file.type === 'directory' && file.path === node.path) {
+            return { ...file, sidebarHidden: nextHidden }
+          }
+          return file
+        })
+        setFiles(updatedFiles)
         ;(globalThis as any).__FM_CACHE__ = new Map()
         await refreshFiles()
       } else {
@@ -255,7 +307,7 @@ export function EnhancedDirectoryTree() {
     } catch (error) {
       toast({ title: 'Visibility error', description: (error as Error).message, variant: 'error' })
     }
-  }, [activeProject, refreshFiles])
+  }, [activeProject, refreshFiles, allFilePaths, setFiles])
 
   const handleMove = async (sourcePath: string, targetPath: string) => {
     try {
@@ -291,7 +343,7 @@ export function EnhancedDirectoryTree() {
   }
 
   const handleOrderMove = useCallback(async (node: FileNode, direction: 'up' | 'down', levelNodes: FileNode[]) => {
-    const orderable = levelNodes.filter((n) => n.type === 'directory' || (n.type === 'file' && n.name !== 'index.md'))
+    const orderable = levelNodes.filter((n) => n.type === 'directory' || (n.type === 'file' && !/^index\.(md|mdx)$/i.test(n.name)))
     const currentIndex = orderable.findIndex((n) => n.path === node.path)
     if (currentIndex === -1) return
 
@@ -450,11 +502,13 @@ export function EnhancedDirectoryTree() {
   }, [searchTerm, fileTree])
 
   const renderFileTree = (nodes: FileNode[], level: number = 0): React.ReactNode => {
-    const orderableNodes = nodes.filter((n) => n.type === 'directory' || (n.type === 'file' && n.name !== 'index.md'))
+    const orderableNodes = nodes.filter((n) => n.type === 'directory' || (n.type === 'file' && !/^index\.(md|mdx)$/i.test(n.name)))
 
     return nodes.map((node, index) => {
       const isExpanded = expandedFolders.has(node.path)
-      const isSelected = selectedFile === node.path
+      const isSelected = selectedFile === node.path || (
+        node.type === 'directory' && node.indexFilePath && selectedFile === node.indexFilePath
+      )
       const isDragOver = dragOverPath === node.path
       const orderIndex = orderableNodes.findIndex((n) => n.path === node.path)
       const canMoveUp = orderIndex > 0

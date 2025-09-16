@@ -38,6 +38,7 @@ export function useFileTree() {
 
   return {
     files: filteredFiles,
+    allFiles: files,
     searchTerm,
     setSearchTerm,
     selectedFile,

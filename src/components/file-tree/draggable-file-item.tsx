@@ -33,6 +33,7 @@ interface FileNode {
   level?: number
   sidebarOrder?: number
   sidebarHidden?: boolean
+  indexFilePath?: string
 }
 
 interface DraggableFileItemProps {
@@ -94,6 +95,9 @@ export function DraggableFileItem({
     if (isDirectory) {
       if (hasChildren) {
         onToggle(node.path)
+      }
+      if (node.indexFilePath) {
+        onSelect(node.indexFilePath)
       }
     } else {
       onSelect(node.path)

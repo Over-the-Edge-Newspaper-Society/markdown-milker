@@ -156,9 +156,13 @@ export async function GET(request: NextRequest) {
         
         if (file.isDirectory()) {
           let dirMeta: SidebarMeta | undefined
-          const indexPath = join(fullPath, 'index.md')
-          if (existsSync(indexPath)) {
-            dirMeta = await extractSidebarMeta(indexPath)
+          const indexCandidates = ['index.md', 'index.mdx']
+          for (const candidate of indexCandidates) {
+            const candidatePath = join(fullPath, candidate)
+            if (existsSync(candidatePath)) {
+              dirMeta = await extractSidebarMeta(candidatePath)
+              break
+            }
           }
 
           // Add directory entry
@@ -177,7 +181,7 @@ export async function GET(request: NextRequest) {
           result.push(...subFiles)
         } else {
           // Only include markdown files
-          if (['.md', '.markdown'].includes(extname(file.name).toLowerCase())) {
+          if (['.md', '.mdx', '.markdown'].includes(extname(file.name).toLowerCase())) {
             const sidebarMeta = await extractSidebarMeta(fullPath)
             result.push({
               name: file.name,

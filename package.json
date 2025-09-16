@@ -8,7 +8,7 @@
     "dev:collab": "concurrently \"npm run dev:next\" \"npm run dev:yjs\"",
     "dev:next": "next dev",
     "dev:yjs": "node server/yjs-websocket-server.js",
-    "dev:docs": "cd repo && npm run dev",
+    "dev:docs": "node scripts/dev-docs.js",
     "dev:ws": "node server/websocket-server.js",
     "build": "next build",
     "start": "next start",

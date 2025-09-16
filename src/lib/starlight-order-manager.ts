@@ -102,12 +102,24 @@ export class StarlightOrderManager {
     const sections: { label: string; items: any[]; order: number }[] = []
     const markdownExtensions = ['.md', '.mdx']
 
+    const findIndexFile = (dirPath: string): string | undefined => {
+      const candidates = ['index.md', 'index.mdx']
+      for (const candidate of candidates) {
+        const candidatePath = join(dirPath, candidate)
+        if (existsSync(candidatePath)) {
+          return candidatePath
+        }
+      }
+      return undefined
+    }
+
     const directories = await Promise.all(
       entries
         .filter((entry) => entry.isDirectory())
         .map(async (dir) => {
-          const indexPath = join(docsRoot, dir.name, 'index.md')
-          const meta = await StarlightOrderManager.readFrontmatterMeta(indexPath)
+          const dirRoot = join(docsRoot, dir.name)
+          const indexPath = findIndexFile(dirRoot)
+          const meta = indexPath ? await StarlightOrderManager.readFrontmatterMeta(indexPath) : {}
           return {
             name: dir.name,
             meta,
@@ -135,7 +147,7 @@ export class StarlightOrderManager {
       const pageEntries = await Promise.all(
         dirEntries
           .filter((entry) => entry.isFile() && markdownExtensions.some((ext) => entry.name.endsWith(ext)))
-          .filter((entry) => entry.name !== 'index.md')
+          .filter((entry) => !entry.name.startsWith('index.'))
           .map(async (entry) => {
             const filePath = join(docsRoot, dir.name, entry.name)
             const meta = await StarlightOrderManager.readFrontmatterMeta(filePath)

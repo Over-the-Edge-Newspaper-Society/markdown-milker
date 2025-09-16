@@ -11,6 +11,15 @@ const DOCS_CONFIG = {
   devPort: 4321
 };
 
+const normalizeBasePath = (base: string) => {
+  if (!base) return '/';
+  let normalized = base.startsWith('/') ? base : `/${base}`;
+  if (!normalized.endsWith('/')) {
+    normalized = `${normalized}/`;
+  }
+  return normalized;
+};
+
 interface DocsPreviewProps {
   className?: string;
   onClose?: () => void;
@@ -24,14 +33,24 @@ export const DocsPreview = ({ className, onClose, isFullScreen = false, currentF
   const [docsUrl, setDocsUrl] = useState('http://localhost:4321');
 
   // Function to convert file path to docs URL
+  const docsBasePath = normalizeBasePath(DOCS_CONFIG.base);
+  const isLocalHost = () => {
+    if (typeof window === 'undefined') return process.env.NODE_ENV === 'development';
+    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  };
+
   const getDocsUrlForFile = (filePath: string | undefined): string => {
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const baseUrl = isDevelopment 
-      ? `http://localhost:${DOCS_CONFIG.devPort}${DOCS_CONFIG.base.replace(/\/$/, '')}`
-      : DOCS_CONFIG.base.replace(/\/$/, '');
-    
+    const isDevelopment = isLocalHost();
+    const devOrigin = `http://localhost:${DOCS_CONFIG.devPort}`;
+    const remoteOrigin = DOCS_CONFIG.site.replace(/\/$/, '');
+    const basePath = docsBasePath.replace(/\/$/, '');
+    const baseUrl = isDevelopment
+      ? `${devOrigin}${basePath}`
+      : `${remoteOrigin}${basePath}`;
+
     if (!filePath) {
-      return baseUrl;
+      const resolvedBase = baseUrl || `${devOrigin}${docsBasePath}`;
+      return resolvedBase.endsWith('/') ? resolvedBase : `${resolvedBase}/`;
     }
     
     // Convert file path to docs route
@@ -62,24 +81,75 @@ export const DocsPreview = ({ className, onClose, isFullScreen = false, currentF
 
   useEffect(() => {
     const url = getDocsUrlForFile(currentFilePath);
-    console.log('📍 DocsPreview URL mapping:', { 
-      currentFilePath, 
-      generatedUrl: url 
+    console.log('📍 DocsPreview URL mapping:', {
+      currentFilePath,
+      generatedUrl: url
     });
-    setDocsUrl(url);
-    
-    // Check if docs are available
-    const checkDocsAvailability = async () => {
-      try {
-        const baseCheckUrl = url.split('/').slice(0, 3).join('/'); // Get just the base URL for checking
-        const response = await fetch(baseCheckUrl, { mode: 'no-cors' });
-        // If we get here without error, docs are probably available
-      } catch (error) {
-        console.log('Docs not available yet, may need to run "npm run dev:unified"');
+
+    let cancelled = false;
+    const isDevelopment = isLocalHost();
+
+    const waitForDocs = async () => {
+      setIsLoading(true);
+      if (!isDevelopment) {
+        if (!cancelled) {
+          setDocsUrl(url);
+        }
+        return;
+      }
+
+      setDocsUrl('about:blank');
+
+      if (url === 'about:blank') {
+        setIsLoading(false);
+        return;
+      }
+
+      const generated = new URL(url);
+      const basePath = docsBasePath;
+      const remoteBase = `${DOCS_CONFIG.site.replace(/\/$/, '')}${docsBasePath}`;
+      const routeSuffix = generated.pathname.startsWith(basePath)
+        ? generated.pathname.slice(basePath.length)
+        : generated.pathname;
+      const remoteUrl = `${remoteBase}${routeSuffix}`;
+
+      const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+      let attempts = 0;
+      const maxAttempts = 40;
+
+      while (!cancelled && attempts < maxAttempts) {
+        try {
+          const response = await fetch(`${url}?t=${Date.now()}`, {
+            method: 'GET',
+            cache: 'no-store',
+            headers: {
+              'x-docs-preview-ping': '1'
+            }
+          });
+          if (response.ok) {
+            break;
+          }
+        } catch (error) {
+          // Ignore errors while waiting for the dev server to restart
+        }
+        attempts += 1;
+        await sleep(500);
+      }
+
+      if (!cancelled) {
+        if (attempts >= maxAttempts) {
+          setDocsUrl(remoteUrl);
+        } else {
+          setDocsUrl(url);
+        }
       }
     };
-    
-    checkDocsAvailability();
+
+    waitForDocs();
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentFilePath]); // Re-run when currentFilePath changes
 
   const handleRefresh = () => {
@@ -92,6 +162,10 @@ export const DocsPreview = ({ className, onClose, isFullScreen = false, currentF
   };
 
   const handleLoad = () => {
+    const iframe = document.getElementById('docs-preview-iframe') as HTMLIFrameElement | null;
+    if (iframe && iframe.src === 'about:blank') {
+      return;
+    }
     setIsLoading(false);
   };
 
