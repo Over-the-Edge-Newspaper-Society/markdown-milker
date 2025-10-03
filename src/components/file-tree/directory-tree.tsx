@@ -216,7 +216,19 @@ export function EnhancedDirectoryTree() {
         fileName += '.md'
       }
 
-      const defaultContent = '# New Document\n\nStart writing here...'
+      // Generate title from filename
+      const baseName = fileName.split('/').pop()?.replace(/\.(md|mdx)$/i, '') || 'New Document'
+      const title = baseName.split('-').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ')
+
+      const defaultContent = `---
+title: ${title}
+---
+
+# ${title}
+
+Start writing here...`
       await createFile(fileName, content || defaultContent)
       await refreshFiles()
       selectFile(fileName)
@@ -236,6 +248,43 @@ export function EnhancedDirectoryTree() {
     } catch (error) {
       console.error('Failed to create folder:', error)
       throw error
+    }
+  }
+
+  const handleDelete = async (path: string, isDirectory: boolean) => {
+    try {
+      const { deleteFile, deleteDirectory } = useEditorStore.getState()
+
+      if (isDirectory) {
+        await deleteDirectory(path)
+        toast({
+          title: 'Folder deleted',
+          description: `Successfully deleted ${path}`,
+          variant: 'success'
+        })
+      } else {
+        await deleteFile(path)
+        toast({
+          title: 'File deleted',
+          description: `Successfully deleted ${path}`,
+          variant: 'success'
+        })
+      }
+
+      await refreshFiles()
+
+      // Clear frontmatter cache for deleted path
+      const fmCache = (globalThis as any).__FM_CACHE__
+      if (fmCache) {
+        fmCache.delete(path)
+      }
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      toast({
+        title: 'Delete failed',
+        description: (error as Error).message || 'Failed to delete item',
+        variant: 'error'
+      })
     }
   }
 
@@ -538,6 +587,7 @@ export function EnhancedDirectoryTree() {
             canMoveDown={canMoveDown}
             hidden={node.sidebarHidden}
             onToggleHidden={(next) => toggleHiddenState(node, next)}
+            onDelete={handleDelete}
           />
           
           {/* Render children if expanded */}

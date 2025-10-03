@@ -327,14 +327,14 @@ export function DraggableFileItem({
         </div>
       )}
 
-      <div className="flex items-center space-x-1 flex-1 min-w-0">
+      <div className="flex items-center space-x-1 min-w-0 overflow-hidden" style={{ flex: '1 1 0', maxWidth: 'calc(100% - 32px)' }}>
         {/* Drag handle (visible on hover) */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab active:cursor-grabbing" />
         </div>
 
         {(onMoveUp || onMoveDown) && (
-          <div className="flex flex-col -ml-1 mr-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex flex-col -ml-1 mr-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
@@ -363,7 +363,7 @@ export function DraggableFileItem({
           <Button
             variant="ghost"
             size="sm"
-            className="h-4 w-4 p-0 hover:bg-transparent"
+            className="h-4 w-4 p-0 hover:bg-transparent flex-shrink-0"
             onClick={handleToggleClick}
           >
             {isExpanded ? (
@@ -373,7 +373,7 @@ export function DraggableFileItem({
             )}
           </Button>
         ) : (
-          <div className="w-4" /> // Spacer for alignment
+          <div className="w-4 flex-shrink-0" /> // Spacer for alignment
         )}
 
         {/* Icon */}
@@ -390,28 +390,33 @@ export function DraggableFileItem({
         </div>
 
         {/* Name + indicators (vertical layout) */}
-        <div className="flex flex-col min-w-0 flex-[1_1_auto] gap-1">
-          {/* File/folder name */}
+        <div className="flex flex-col min-w-0 gap-1 overflow-hidden" style={{ maxWidth: '100px' }}>
+          {/* File/folder name with folder count */}
           <span
-            className={`text-sm select-none ${
-              fileNameDisplay === 'wrap'
-                ? 'break-words leading-tight'
-                : 'truncate'
-            }`}
+            className="text-sm select-none truncate block"
             title={node.name}
           >
             {node.name}
+            {isDirectory && hasChildren && (
+              <span className="text-[10px] text-muted-foreground ml-1">({node.children!.length})</span>
+            )}
           </span>
 
           {/* Metadata line (only show if there are any indicators) */}
           {(fmMeta?.order !== undefined ||
             (!isDirectory && fmMeta?.label) ||
             (!isDirectory && fmMeta?.badge?.text) ||
+            (!isDirectory && node.size !== undefined && node.size > 0) ||
             onToggleHidden ||
             effectiveHidden) && (
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap overflow-hidden">
               {fmMeta?.order !== undefined && (
                 <span className="text-[10px] bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-1 rounded whitespace-nowrap">#{fmMeta.order}</span>
+              )}
+              {!isDirectory && node.size !== undefined && node.size > 0 && (
+                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                  {formatFileSize(node.size)}
+                </span>
               )}
               {!isDirectory && fmMeta?.label && (
                 <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">"{fmMeta.label}"</span>
@@ -440,28 +445,14 @@ export function DraggableFileItem({
             </div>
           )}
         </div>
-
-        {/* Right meta (size or children count) */}
-        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-          {!isDirectory && node.size !== undefined && node.size > 0 && (
-            <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">
-              {formatFileSize(node.size)}
-            </span>
-          )}
-          {isDirectory && hasChildren && (
-            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded whitespace-nowrap">
-              {node.children!.length}
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* Actions menu */}
+      {/* Actions menu - always visible area */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="h-3 w-3" />
