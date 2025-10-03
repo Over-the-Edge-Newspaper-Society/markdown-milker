@@ -56,7 +56,7 @@ export const DocsPreview = ({ className, onClose, isFullScreen = false, currentF
     // Convert file path to docs route
     // Example: "submission-process/email-drafter.md" -> "/submission-process/email-drafter/"
     let route = filePath
-      .replace(/\.md$/, '') // Remove .md extension
+      .replace(/\.(md|mdx)$/, '') // Remove .md or .mdx extension
       .replace(/\/index$/, '') // Remove /index if present
       .replace(/^src\/content\/docs\//, '') // Remove content path prefix if present
       .replace(/\\/g, '/'); // Normalize path separators

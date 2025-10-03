@@ -26,19 +26,51 @@ const wrapperPath = join(repoRoot, wrapperFileName)
 
 const wrapperSource = `import baseConfig from './astro.config.mjs';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 
 const sidebarConfigPath = fileURLToPath(new URL('./sidebar.config.mjs', import.meta.url));
+const wrapperConfigPath = fileURLToPath(new URL('./__mm_dev_astro.config.mjs', import.meta.url));
 
 const sidebarWatcherPlugin = () => ({
   name: 'markdown-milker-sidebar-config-reloader',
   configureServer(server) {
-    const restartOnChange = (file) => {
-      if (file === sidebarConfigPath) {
-        server.restart();
+    let isRestarting = false;
+
+    const restartOnChange = async (file) => {
+      // Prevent restart if already restarting or if wrapper config changed
+      if (isRestarting || file === wrapperConfigPath) {
+        return;
+      }
+
+      // Only restart if the sidebar config exists and changed
+      if (file === sidebarConfigPath && existsSync(sidebarConfigPath)) {
+        console.log('Sidebar config changed, restarting...');
+        isRestarting = true;
+
+        try {
+          await server.restart();
+        } catch (error) {
+          console.error('Failed to restart server:', error);
+        } finally {
+          // Reset the flag after a delay to allow the restart to complete
+          setTimeout(() => {
+            isRestarting = false;
+          }, 2000);
+        }
       }
     };
 
-    server.watcher.add(sidebarConfigPath);
+    if (existsSync(sidebarConfigPath)) {
+      server.watcher.add(sidebarConfigPath);
+    }
+
+    // Unwatch the wrapper config to prevent restart loops
+    try {
+      server.watcher.unwatch(wrapperConfigPath);
+    } catch (e) {
+      // Wrapper might not be watched yet, that's fine
+    }
+
     server.watcher.on('change', restartOnChange);
     server.watcher.on('add', restartOnChange);
   },

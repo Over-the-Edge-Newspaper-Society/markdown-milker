@@ -11,10 +11,12 @@ interface EditorStore {
   currentFilePath: string | null
   saveStatus: SaveStatus
   activeDirectory: string // Add active directory
+  fileReloadTrigger: number // Increment to force reload
   setContent: (content: string) => void
   setCurrentFilePath: (path: string | null) => void
   setSaveStatus: (status: SaveStatus) => void
   setActiveDirectory: (dir: string) => void
+  triggerFileReload: () => void
   saveFile: () => Promise<void>
   createFile: (path: string, content?: string) => Promise<void>
   createDirectory: (path: string) => Promise<void>
@@ -29,24 +31,29 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   currentFilePath: null,
   saveStatus: 'saved',
   activeDirectory: 'docs', // Default to docs
-  
+  fileReloadTrigger: 0,
+
   setContent: (content: string) => {
     const { currentContent } = get()
     if (content !== currentContent) {
       set({ currentContent: content, saveStatus: 'unsaved' })
     }
   },
-  
+
   setCurrentFilePath: (path: string | null) => {
     set({ currentFilePath: path, saveStatus: 'saved' })
   },
-  
+
   setSaveStatus: (status: SaveStatus) => {
     set({ saveStatus: status })
   },
 
   setActiveDirectory: (dir: string) => {
     set({ activeDirectory: dir })
+  },
+
+  triggerFileReload: () => {
+    set((state) => ({ fileReloadTrigger: state.fileReloadTrigger + 1 }))
   },
   
   saveFile: async () => {

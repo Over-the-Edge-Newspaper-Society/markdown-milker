@@ -16,14 +16,15 @@ import { Button } from '@/components/ui/button'
 type EditorMode = 'collaborative' | 'solo'
 
 export function EditorArea() {
-  const { 
-    currentContent, 
-    setContent, 
-    saveFile, 
-    setCurrentFilePath, 
-    setSaveStatus, 
+  const {
+    currentContent,
+    setContent,
+    saveFile,
+    setCurrentFilePath,
+    setSaveStatus,
     currentFilePath,
-    saveStatus 
+    saveStatus,
+    fileReloadTrigger
   } = useEditorStore()
   const { selectedFile, closeFile } = useFileStore()
   const [fileContent, setFileContent] = useState('')
@@ -207,7 +208,7 @@ export function EditorArea() {
       setTotalSaves(0)
       setLastSaveTime(null)
     }
-  }, [selectedFile, setContent, setCurrentFilePath, setSaveStatus])
+  }, [selectedFile, setContent, setCurrentFilePath, setSaveStatus, activeProject, fileReloadTrigger])
 
   // ✅ Handle editor content changes
   const handleEditorChange = useCallback(async (content: string) => {
@@ -346,7 +347,8 @@ export function EditorArea() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Unified 2-row header */}
+      {/* Unified 2-row header - hidden in docs preview mode */}
+      {activeTab !== 'preview' && (
       <div className="border-b bg-muted/30">
         {/* Row 1: File path, tabs, and actions */}
         <div className="px-4 h-10 flex items-center justify-between">
@@ -447,6 +449,7 @@ export function EditorArea() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Content area - Fixed overflow to allow menus to show */}
       <div className="flex-1 flex flex-col relative">

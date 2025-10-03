@@ -29,7 +29,7 @@ interface FileNode {
 
 export function EnhancedDirectoryTree() {
   const { files, allFiles, searchTerm, setSearchTerm, selectedFile, selectFile, refreshFiles } = useFileTree()
-  const { createFile, createDirectory, moveFile } = useEditorStore()
+  const { createFile, createDirectory, moveFile, triggerFileReload } = useEditorStore()
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['']))
   const [dragOverPath, setDragOverPath] = useState<string | null>(null)
   const [isRootDragOver, setIsRootDragOver] = useState(false)
@@ -300,6 +300,9 @@ export function EnhancedDirectoryTree() {
         setFiles(updatedFiles)
         ;(globalThis as any).__FM_CACHE__ = new Map()
         await refreshFiles()
+
+        // Trigger editor reload to update frontmatter display
+        triggerFileReload()
       } else {
         const err = await res.json().catch(() => ({}))
         toast({ title: 'Visibility update failed', description: err.error || 'Unknown error', variant: 'error' })
@@ -307,7 +310,7 @@ export function EnhancedDirectoryTree() {
     } catch (error) {
       toast({ title: 'Visibility error', description: (error as Error).message, variant: 'error' })
     }
-  }, [activeProject, refreshFiles, allFilePaths, setFiles])
+  }, [activeProject, refreshFiles, allFilePaths, setFiles, triggerFileReload])
 
   const handleMove = async (sourcePath: string, targetPath: string) => {
     try {

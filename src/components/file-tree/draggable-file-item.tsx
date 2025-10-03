@@ -407,7 +407,7 @@ export function DraggableFileItem({
                   {fmMeta.badge.text}
                 </span>
               )}
-              {onToggleHidden ? (
+              {onToggleHidden && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -422,10 +422,6 @@ export function DraggableFileItem({
                 >
                   {effectiveHidden ? 'Show' : 'Hide'}
                 </button>
-              ) : (
-                effectiveHidden && (
-                  <span className="text-[10px] px-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">hidden</span>
-                )
               )}
             </div>
           )}
