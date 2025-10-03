@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 
 const execAsync = promisify(exec);
@@ -33,6 +33,14 @@ export async function POST(request: NextRequest) {
     console.log(`📁 Project "${projectId}" found, discarding all local changes...`);
 
     try {
+      // Backup the injected dev config file if it exists
+      const devConfigPath = path.join(repoDir, '__mm_dev_astro.config.mjs');
+      let devConfigBackup: string | null = null;
+      if (existsSync(devConfigPath)) {
+        devConfigBackup = readFileSync(devConfigPath, 'utf-8');
+        console.log('💾 Backed up dev config file');
+      }
+
       // Reset all tracked files to HEAD
       await execAsync('git reset --hard HEAD', { cwd: repoDir });
       console.log('✅ Tracked files reset successfully');
@@ -41,8 +49,11 @@ export async function POST(request: NextRequest) {
       await execAsync('git clean -fd', { cwd: repoDir });
       console.log('✅ Untracked files removed successfully');
 
-      // Remove all ignored files (optional, uncomment if needed)
-      // await execAsync('git clean -fdx', { cwd: repoDir });
+      // Restore the dev config file if it was backed up
+      if (devConfigBackup) {
+        writeFileSync(devConfigPath, devConfigBackup, 'utf-8');
+        console.log('♻️  Restored dev config file');
+      }
 
       console.log('✅ All local changes discarded successfully');
 
