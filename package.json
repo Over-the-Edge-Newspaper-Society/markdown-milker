@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "dev:unified": "concurrently \"npm run dev:next\" \"npm run dev:yjs\" \"npm run dev:docs\"",
     "dev:collab": "concurrently \"npm run dev:next\" \"npm run dev:yjs\"",
-    "dev:next": "next dev",
+    "dev:next": "next dev -H 0.0.0.0",
     "dev:yjs": "node server/yjs-websocket-server.js",
     "dev:docs": "node scripts/dev-docs.js",
     "dev:ws": "node server/websocket-server.js",

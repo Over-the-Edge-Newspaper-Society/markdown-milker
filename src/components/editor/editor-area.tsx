@@ -469,7 +469,9 @@ export function EditorArea() {
                   documentId={documentId}
                   initialContent={markdownOnly}
                   onChange={handleMarkdownChange}
-                  wsUrl={process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234'}
+                  wsUrl={typeof window !== 'undefined'
+                    ? `ws://${window.location.hostname}:${process.env.NEXT_PUBLIC_YJS_PORT || '1234'}`
+                    : (process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234')}
                   collaborative={editorMode === 'collaborative'}
                   onImageLibraryOpen={handleImageLibraryOpen}
                   hideStatusBar={true} // Hide the internal status bar since we show it above
