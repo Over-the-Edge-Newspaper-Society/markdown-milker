@@ -6,7 +6,7 @@ const http = require('http')
 const { setupWSConnection } = require('y-websocket/bin/utils')
 const { v4: uuidv4 } = require('uuid')
 
-const port = process.env.PORT || 1234
+const port = process.env.YJS_PORT || 1234
 const server = http.createServer((request, response) => {
   response.writeHead(200, { 'Content-Type': 'text/plain' })
   response.end('okay')
