@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ content })
     }
 
-    await StarlightOrderManager.generateSidebarConfig(DOCS_PATH)
+    await StarlightOrderManager.generateSidebarConfig(DOCS_PATH, projectId)
 
     // List files and directories with full paths (not nested structure)
     // The frontend will handle building the tree
