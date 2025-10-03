@@ -3,16 +3,17 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { SettingsManager } from '@/lib/settings'
-import { 
-  FileIcon, 
-  FolderIcon, 
-  FolderOpenIcon, 
-  ChevronRight, 
+import {
+  FileIcon,
+  FolderIcon,
+  FolderOpenIcon,
+  ChevronRight,
   ChevronDown,
   MoreHorizontal,
   GripVertical,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Trash2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,6 +22,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 
 interface FileNode {
@@ -54,16 +65,17 @@ interface DraggableFileItemProps {
   canMoveDown?: boolean
   hidden?: boolean
   onToggleHidden?: (nextHidden: boolean) => void
+  onDelete?: (path: string, isDirectory: boolean) => void
 }
 
-export function DraggableFileItem({ 
-  node, 
-  level, 
-  isExpanded, 
-  isSelected, 
+export function DraggableFileItem({
+  node,
+  level,
+  isExpanded,
+  isSelected,
   isDragOver,
   isLast = false,
-  onToggle, 
+  onToggle,
   onSelect,
   onDragOver,
   onDragLeave,
@@ -73,9 +85,11 @@ export function DraggableFileItem({
   canMoveUp = false,
   canMoveDown = false,
   hidden,
-  onToggleHidden
+  onToggleHidden,
+  onDelete
 }: DraggableFileItemProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const dragPreviewRef = useRef<HTMLDivElement | null>(null)
   const [fmMeta, setFmMeta] = useState<{
     order?: number
@@ -456,9 +470,53 @@ export function DraggableFileItem({
         <DropdownMenuContent align="end">
           <DropdownMenuItem>Rename</DropdownMenuItem>
           <DropdownMenuItem>Duplicate</DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+          {onDelete && (
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowDeleteDialog(true)
+              }}
+            >
+              <Trash2 className="h-3 w-3 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {isDirectory ? 'Folder' : 'File'}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{node.name}"?
+              {isDirectory && hasChildren && (
+                <span className="block mt-2 font-semibold text-destructive">
+                  This folder contains {node.children!.length} item(s) and will be permanently deleted.
+                </span>
+              )}
+              <span className="block mt-2">
+                This action cannot be undone.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete?.(node.path, isDirectory)
+                setShowDeleteDialog(false)
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Drop zone indicator */}
       {isDragOver && isDirectory && (
