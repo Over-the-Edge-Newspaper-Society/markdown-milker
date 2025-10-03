@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Plus, FolderPlus, FileText, Folder } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -27,9 +28,9 @@ interface FileCreationDialogProps {
 
 type CreationType = 'file' | 'folder'
 
-export function FileCreationDialog({ 
-  onCreateFile, 
-  onCreateFolder, 
+export function FileCreationDialog({
+  onCreateFile,
+  onCreateFolder,
   currentPath = '',
   trigger,
   defaultType = 'file' // Default to file
@@ -39,6 +40,7 @@ export function FileCreationDialog({
   const [name, setName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [createIndexFile, setCreateIndexFile] = useState(true)
 
   // Reset to default type when dialog opens
   useEffect(() => {
@@ -46,6 +48,7 @@ export function FileCreationDialog({
       setCreationType(defaultType)
       setName('')
       setError('')
+      setCreateIndexFile(true)
     }
   }, [open, defaultType])
 
@@ -58,7 +61,7 @@ export function FileCreationDialog({
 
     try {
       const fullPath = currentPath ? `${currentPath}/${name.trim()}` : name.trim()
-      
+
       if (creationType === 'file') {
         let fileName = fullPath
         if (!fileName.endsWith('.md') && !fileName.endsWith('.markdown')) {
@@ -66,12 +69,20 @@ export function FileCreationDialog({
         }
         await onCreateFile(fileName)
       } else {
+        // Create the folder
         await onCreateFolder(fullPath)
+
+        // Create index file if checkbox is checked
+        if (createIndexFile) {
+          const indexFileName = `${fullPath}/index.md`
+          await onCreateFile(indexFileName)
+        }
       }
-      
+
       setOpen(false)
       setName('')
       setCreationType(defaultType)
+      setCreateIndexFile(true)
     } catch (err) {
       setError((err as Error).message || 'Failed to create item')
     } finally {
@@ -85,6 +96,7 @@ export function FileCreationDialog({
       setName('')
       setError('')
       setCreationType(defaultType)
+      setCreateIndexFile(true)
     }
   }
 
@@ -144,8 +156,8 @@ export function FileCreationDialog({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={
-                    creationType === 'file' 
-                      ? 'my-document' 
+                    creationType === 'file'
+                      ? 'my-document'
                       : 'my-folder'
                   }
                   className={cn(error && 'border-red-500')}
@@ -159,6 +171,23 @@ export function FileCreationDialog({
               </div>
             </div>
           </div>
+
+          {/* Create Index File Option - Only show for folders */}
+          {creationType === 'folder' && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="create-index"
+                checked={createIndexFile}
+                onCheckedChange={(checked) => setCreateIndexFile(checked as boolean)}
+              />
+              <Label
+                htmlFor="create-index"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Create index.md file
+              </Label>
+            </div>
+          )}
 
           {/* Error Display */}
           {error && (
