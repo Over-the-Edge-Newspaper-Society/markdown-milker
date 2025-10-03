@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
 import path from 'path';
+import { StarlightOrderManager } from '@/lib/starlight-order-manager';
 
 const execAsync = promisify(exec);
 
@@ -48,6 +49,25 @@ export async function POST(request: NextRequest) {
       await execAsync(`git clone -b ${branch} "${repoUrl}" "${projectDir}"`);
 
       console.log('✅ Repository cloned successfully');
+
+      // Patch astro.config.mjs to use dynamic sidebar
+      try {
+        await StarlightOrderManager.patchAstroConfig(projectDir);
+      } catch (patchError) {
+        console.warn('⚠️ Failed to patch astro.config.mjs:', patchError);
+        // Continue anyway, user can manually patch if needed
+      }
+
+      // Generate initial sidebar config
+      try {
+        const docsPath = path.join(projectDir, 'src', 'content', 'docs');
+        if (existsSync(docsPath)) {
+          await StarlightOrderManager.generateSidebarConfig(docsPath, repoName);
+          console.log('✅ Generated initial sidebar config');
+        }
+      } catch (sidebarError) {
+        console.warn('⚠️ Failed to generate sidebar config:', sidebarError);
+      }
 
       return NextResponse.json({
         success: true,

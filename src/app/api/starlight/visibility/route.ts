@@ -31,11 +31,19 @@ export async function POST(request: NextRequest) {
     const docsRoot = getDocsPath(projectId)
     const fullPath = join(docsRoot, path)
 
+    console.log('[Visibility API] docsRoot:', docsRoot)
+    console.log('[Visibility API] path:', path)
+    console.log('[Visibility API] fullPath:', fullPath)
+    console.log('[Visibility API] hidden:', hidden)
+    console.log('[Visibility API] projectId:', projectId)
+
     if (!existsSync(fullPath)) {
       return NextResponse.json({ success: false, error: 'File not found', fullPath }, { status: 404 })
     }
 
     await StarlightOrderManager.updateSidebarHidden(fullPath, Boolean(hidden), docsRoot, projectId)
+
+    console.log('[Visibility API] Successfully updated sidebar config')
 
     return NextResponse.json({ success: true, fullPath })
   } catch (error: any) {

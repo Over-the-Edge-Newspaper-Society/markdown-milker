@@ -367,4 +367,38 @@ export class StarlightOrderManager {
     await writeFile(filePath, updatedContent, 'utf-8')
     await StarlightOrderManager.generateSidebarConfig(docsRoot, projectId)
   }
+
+  static async patchAstroConfig(projectPath: string): Promise<void> {
+    const astroConfigPath = join(projectPath, 'astro.config.mjs')
+    if (!existsSync(astroConfigPath)) {
+      console.log('No astro.config.mjs found, skipping patch')
+      return
+    }
+
+    let content = await readFile(astroConfigPath, 'utf-8')
+
+    // Check if already patched
+    if (content.includes('sidebar.config.mjs')) {
+      console.log('astro.config.mjs already patched')
+      return
+    }
+
+    // Add import for sidebar config after other imports
+    const importMatch = content.match(/(import .+ from .+;?\n)+/)
+    if (importMatch) {
+      const lastImportEnd = importMatch[0].length
+      content = content.slice(0, lastImportEnd) +
+                "import sidebarConfig from './sidebar.config.mjs';\n" +
+                content.slice(lastImportEnd)
+    }
+
+    // Replace hardcoded sidebar array with sidebarConfig
+    content = content.replace(
+      /sidebar:\s*\[[\s\S]*?\],(\s*\n)/m,
+      'sidebar: sidebarConfig,$1'
+    )
+
+    await writeFile(astroConfigPath, content, 'utf-8')
+    console.log('✅ Patched astro.config.mjs to use dynamic sidebar')
+  }
 }

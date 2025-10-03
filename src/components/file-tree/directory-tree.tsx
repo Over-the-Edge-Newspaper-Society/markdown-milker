@@ -322,7 +322,12 @@ Start writing here...`
     }
 
     try {
-      const res = await fetch('/api/starlight/visibility', {
+      // Use relative path if on Next.js origin, otherwise use full URL
+      const apiUrl = window.location.port === '3000'
+        ? '/api/starlight/visibility'
+        : 'http://localhost:3000/api/starlight/visibility'
+
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: targetPath, hidden: nextHidden, projectId: activeProject || undefined })

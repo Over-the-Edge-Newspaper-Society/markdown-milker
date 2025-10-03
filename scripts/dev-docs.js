@@ -61,6 +61,7 @@ const sidebarWatcherPlugin = () => ({
   name: 'markdown-milker-sidebar-config-reloader',
   configureServer(server) {
     let isRestarting = false;
+    let restartTimeout = null;
 
     const restartOnChange = async (file) => {
       // Prevent restart if already restarting or if wrapper config changed
@@ -70,19 +71,27 @@ const sidebarWatcherPlugin = () => ({
 
       // Only restart if the sidebar config exists and changed
       if (file === sidebarConfigPath && existsSync(sidebarConfigPath)) {
-        console.log('Sidebar config changed, restarting...');
-        isRestarting = true;
-
-        try {
-          await server.restart();
-        } catch (error) {
-          console.error('Failed to restart server:', error);
-        } finally {
-          // Reset the flag after a delay to allow the restart to complete
-          setTimeout(() => {
-            isRestarting = false;
-          }, 2000);
+        // Clear any pending restart
+        if (restartTimeout) {
+          clearTimeout(restartTimeout);
         }
+
+        // Debounce restart by 500ms to avoid rapid restarts
+        restartTimeout = setTimeout(async () => {
+          console.log('Sidebar config changed, restarting...');
+          isRestarting = true;
+
+          try {
+            await server.restart();
+          } catch (error) {
+            console.error('Failed to restart server:', error);
+          } finally {
+            // Reset the flag after a delay to allow the restart to complete
+            setTimeout(() => {
+              isRestarting = false;
+            }, 2000);
+          }
+        }, 500);
       }
     };
 

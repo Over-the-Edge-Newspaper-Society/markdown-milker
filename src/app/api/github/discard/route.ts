@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
+import { StarlightOrderManager } from '@/lib/starlight-order-manager';
 
 const execAsync = promisify(exec);
 
@@ -53,6 +54,25 @@ export async function POST(request: NextRequest) {
       if (devConfigBackup) {
         writeFileSync(devConfigPath, devConfigBackup, 'utf-8');
         console.log('♻️  Restored dev config file');
+      }
+
+      // Re-patch astro.config.mjs after discard
+      try {
+        await StarlightOrderManager.patchAstroConfig(repoDir);
+        console.log('🔧 Re-patched astro.config.mjs');
+      } catch (patchError) {
+        console.warn('⚠️ Failed to re-patch astro.config.mjs:', patchError);
+      }
+
+      // Regenerate sidebar config
+      try {
+        const docsPath = path.join(repoDir, 'src', 'content', 'docs');
+        if (existsSync(docsPath)) {
+          await StarlightOrderManager.generateSidebarConfig(docsPath, projectId);
+          console.log('🔄 Regenerated sidebar config');
+        }
+      } catch (sidebarError) {
+        console.warn('⚠️ Failed to regenerate sidebar config:', sidebarError);
       }
 
       console.log('✅ All local changes discarded successfully');
