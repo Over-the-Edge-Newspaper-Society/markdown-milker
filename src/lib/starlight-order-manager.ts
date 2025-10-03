@@ -76,7 +76,11 @@ export class StarlightOrderManager {
     return join(process.cwd(), 'docs')
   }
 
-  static sidebarConfigPath(): string {
+  static sidebarConfigPath(projectId?: string): string {
+    if (projectId) {
+      const projectSidebarPath = join(process.cwd(), 'projects', projectId, 'sidebar.config.mjs')
+      return projectSidebarPath
+    }
     return join(process.cwd(), 'repo', 'sidebar.config.mjs')
   }
 
@@ -97,7 +101,7 @@ export class StarlightOrderManager {
     return meta.label || meta.title || fallback.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   }
 
-  static async generateSidebarConfig(docsRoot: string): Promise<void> {
+  static async generateSidebarConfig(docsRoot: string, projectId?: string): Promise<void> {
     const entries = await readdir(docsRoot, { withFileTypes: true })
     const sections: { label: string; items: any[]; order: number }[] = []
     const markdownExtensions = ['.md', '.mdx']
@@ -218,7 +222,7 @@ export class StarlightOrderManager {
       })
     }
 
-    const sidebarPath = StarlightOrderManager.sidebarConfigPath()
+    const sidebarPath = StarlightOrderManager.sidebarConfigPath(projectId)
     const orderedSections = sections
       .sort((a, b) => {
         if (a.order !== b.order) return a.order - b.order
@@ -230,7 +234,7 @@ export class StarlightOrderManager {
     await writeFile(sidebarPath, serialized, 'utf-8')
   }
 
-  static async rebalanceDirectory(dirPath: string, docsRoot?: string): Promise<number> {
+  static async rebalanceDirectory(dirPath: string, docsRoot?: string, projectId?: string): Promise<number> {
     const entries = await readdir(dirPath, { withFileTypes: true })
     const markdownExtensions = ['.md', '.mdx']
     const mdFiles = entries
@@ -253,12 +257,12 @@ export class StarlightOrderManager {
       await writeFile(filePath, updatedContent, 'utf-8')
       updatedCount += 1
     }
-    const root = docsRoot || StarlightOrderManager.docsRoot()
-    await StarlightOrderManager.generateSidebarConfig(root)
+    const root = docsRoot || StarlightOrderManager.docsRoot(projectId)
+    await StarlightOrderManager.generateSidebarConfig(root, projectId)
     return updatedCount
   }
 
-  static async applyManualOrder(dirPath: string, orderedItems: { name: string; type: 'file' | 'directory' }[], docsRoot: string): Promise<number> {
+  static async applyManualOrder(dirPath: string, orderedItems: { name: string; type: 'file' | 'directory' }[], docsRoot: string, projectId?: string): Promise<number> {
     const entries = await readdir(dirPath, { withFileTypes: true })
     const markdownExtensions = ['.md', '.mdx']
     const fileEntries = entries.filter((entry) => entry.isFile() && markdownExtensions.some((ext) => entry.name.endsWith(ext)))
@@ -329,11 +333,11 @@ export class StarlightOrderManager {
       updatedCount += 1
     }
 
-    await StarlightOrderManager.generateSidebarConfig(docsRoot)
+    await StarlightOrderManager.generateSidebarConfig(docsRoot, projectId)
     return updatedCount
   }
 
-  static async updateSidebarHidden(filePath: string, hidden: boolean, docsRoot: string): Promise<void> {
+  static async updateSidebarHidden(filePath: string, hidden: boolean, docsRoot: string, projectId?: string): Promise<void> {
     const raw = await readFile(filePath, 'utf-8')
     const { data, body } = parseFrontmatter(raw)
     const sidebar = { ...(data.sidebar || {}) }
@@ -347,6 +351,6 @@ export class StarlightOrderManager {
     const newData = { ...data, sidebar }
     const updatedContent = stringifyFrontmatter(body, newData)
     await writeFile(filePath, updatedContent, 'utf-8')
-    await StarlightOrderManager.generateSidebarConfig(docsRoot)
+    await StarlightOrderManager.generateSidebarConfig(docsRoot, projectId)
   }
 }

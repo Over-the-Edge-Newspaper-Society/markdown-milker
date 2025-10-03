@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       }))
       .filter((item: { name?: string; type: 'file' | 'directory' }) => Boolean(item.name)) as { name: string; type: 'file' | 'directory' }[]
 
-    const updated = await StarlightOrderManager.applyManualOrder(targetDir, normalized, docsRoot)
+    const updated = await StarlightOrderManager.applyManualOrder(targetDir, normalized, docsRoot, projectId)
 
     return NextResponse.json({ success: true, updated, targetDir })
   } catch (error: any) {

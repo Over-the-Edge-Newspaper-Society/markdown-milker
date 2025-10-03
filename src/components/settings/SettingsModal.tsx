@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SettingsManager } from '@/lib/settings';
-import { useGitHubSync } from '@/hooks/useGitHubSync';
-import { Eye, EyeOff, Github, ExternalLink, CheckCircle, XCircle, FolderSearch } from 'lucide-react';
+import { Eye, EyeOff, Github, ExternalLink } from 'lucide-react';
 
 interface SettingsModalProps {
   open: boolean;
@@ -17,13 +16,6 @@ interface SettingsModalProps {
 export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const [settings, setSettings] = useState(SettingsManager.getDefaultSettings());
   const [showToken, setShowToken] = useState(false);
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [branches, setBranches] = useState<string[]>(['main']);
-  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
-  const [repoStructure, setRepoStructure] = useState<any>(null);
-  const [isExploring, setIsExploring] = useState(false);
-  const { testConnection } = useGitHubSync();
   
   useEffect(() => {
     if (open) {
@@ -41,96 +33,6 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     window.location.reload();
   };
   
-  const handleTestConnection = async () => {
-    if (!settings.github.token || !settings.github.repoUrl) {
-      setConnectionStatus('error');
-      return;
-    }
-    
-    setIsTestingConnection(true);
-    setConnectionStatus('idle');
-    
-    try {
-      // Save settings temporarily to test
-      SettingsManager.saveSettings(settings);
-      const isConnected = await testConnection();
-      setConnectionStatus(isConnected ? 'success' : 'error');
-    } catch {
-      setConnectionStatus('error');
-    } finally {
-      setIsTestingConnection(false);
-    }
-  };
-  
-  const fetchBranches = async () => {
-    if (!settings.github.token || !settings.github.repoUrl) {
-      return;
-    }
-    
-    setIsLoadingBranches(true);
-    try {
-      const response = await fetch('/api/github/branches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: settings.github.token,
-          repoUrl: settings.github.repoUrl
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setBranches(data.branches || ['main']);
-      } else {
-        setBranches(['main']);
-      }
-    } catch {
-      setBranches(['main']);
-    } finally {
-      setIsLoadingBranches(false);
-    }
-  };
-  
-  // Fetch branches when repo URL or token changes
-  useEffect(() => {
-    if (settings.github.token && settings.github.repoUrl) {
-      fetchBranches();
-    }
-  }, [settings.github.token, settings.github.repoUrl]);
-  
-  const exploreRepository = async () => {
-    if (!settings.github.token || !settings.github.repoUrl) {
-      return;
-    }
-    
-    setIsExploring(true);
-    setRepoStructure(null);
-    
-    try {
-      const response = await fetch('/api/github/explore', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: settings.github.token,
-          repoUrl: settings.github.repoUrl,
-          path: settings.github.contentPath || ''
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setRepoStructure(data);
-      } else {
-        const error = await response.json();
-        setRepoStructure({ error: error.error || 'Failed to explore repository' });
-      }
-    } catch {
-      setRepoStructure({ error: 'Failed to explore repository' });
-    } finally {
-      setIsExploring(false);
-    }
-  };
-  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
@@ -144,10 +46,10 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
               <h4 className="font-medium flex items-center gap-2 text-sm text-blue-900 dark:text-blue-100">
                 <Github className="w-4 h-4" />
-                GitHub Setup
+                GitHub Personal Access Token
               </h4>
               <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                Need a personal access token with repo permissions.
+                Required for pushing changes to GitHub repositories. Repository settings are managed per-project.
               </p>
               <Button
                 variant="link"
@@ -157,9 +59,9 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 Create Token <ExternalLink className="w-3 h-3 ml-1" />
               </Button>
             </div>
-            
+
             <div className="space-y-1">
-              <Label htmlFor="github-token" className="text-sm">Token</Label>
+              <Label htmlFor="github-token" className="text-sm">Personal Access Token</Label>
               <div className="relative">
                 <Input
                   id="github-token"
@@ -182,142 +84,9 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   {showToken ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                 </Button>
               </div>
-            </div>
-            
-            <div className="space-y-1">
-              <Label htmlFor="github-repo-url" className="text-sm">Repository URL</Label>
-              <Input
-                id="github-repo-url"
-                placeholder="https://github.com/username/repo-name"
-                value={settings.github.repoUrl}
-                onChange={(e) => setSettings(prev => ({
-                  ...prev,
-                  github: { ...prev.github, repoUrl: e.target.value }
-                }))}
-                className="h-8"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="github-branch" className="text-sm">Branch</Label>
-                <div className="relative">
-                  <select
-                    id="github-branch"
-                    value={settings.github.branch}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      github: { ...prev.github, branch: e.target.value }
-                    }))}
-                    className="w-full h-8 px-2 border rounded-md bg-background text-sm dark:bg-background"
-                    disabled={isLoadingBranches}
-                  >
-                    {branches.map(branch => (
-                      <option key={branch} value={branch}>
-                        {branch}
-                      </option>
-                    ))}
-                  </select>
-                  {isLoadingBranches && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                      <div className="animate-spin w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            
-              <div className="space-y-1">
-                <Label htmlFor="github-content-path" className="text-sm">Content Path</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="github-content-path"
-                    placeholder="docs"
-                    value={settings.github.contentPath}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      github: { ...prev.github, contentPath: e.target.value }
-                    }))}
-                    className="h-8 flex-1"
-                  />
-                  <Button
-                    onClick={exploreRepository}
-                    disabled={isExploring || !settings.github.token || !settings.github.repoUrl}
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    title="Explore repository structure"
-                  >
-                    {isExploring ? (
-                      <div className="animate-spin w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full" />
-                    ) : (
-                      <FolderSearch className="w-3 h-3" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Repository Structure Explorer */}
-            {repoStructure && (
-              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 text-xs">
-                {repoStructure.error ? (
-                  <div className="text-red-600 dark:text-red-400">
-                    {repoStructure.error}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div>
-                      <strong>Path:</strong> {repoStructure.path || 'root'} 
-                      {repoStructure.totalMarkdown > 0 && (
-                        <span className="text-green-600 dark:text-green-400 ml-2">
-                          ✓ {repoStructure.totalMarkdown} markdown files found
-                        </span>
-                      )}
-                    </div>
-                    {repoStructure.directories.length > 0 && (
-                      <div>
-                        <strong>Folders:</strong> {repoStructure.directories.join(', ')}
-                      </div>
-                    )}
-                    {repoStructure.markdownFiles.length > 0 && (
-                      <div>
-                        <strong>Markdown files:</strong> {repoStructure.markdownFiles.slice(0, 5).join(', ')}
-                        {repoStructure.markdownFiles.length > 5 && ` ... and ${repoStructure.markdownFiles.length - 5} more`}
-                      </div>
-                    )}
-                    {repoStructure.totalMarkdown === 0 && (
-                      <div className="text-amber-600 dark:text-amber-400">
-                        No markdown files found in this path. Try exploring subdirectories or leave path empty.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            
-            <div className="flex items-center justify-between">
-              <Button
-                onClick={handleTestConnection}
-                disabled={isTestingConnection}
-                variant="outline"
-                size="sm"
-                className="h-8"
-              >
-                {isTestingConnection ? 'Testing...' : 'Test Connection'}
-              </Button>
-              
-              {connectionStatus === 'success' && (
-                <div className="flex items-center gap-1 text-green-600 text-xs">
-                  <CheckCircle className="w-3 h-3" />
-                  Connected
-                </div>
-              )}
-              {connectionStatus === 'error' && (
-                <div className="flex items-center gap-1 text-red-600 text-xs">
-                  <XCircle className="w-3 h-3" />
-                  Failed
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                This token is used for all projects. Repository-specific settings are configured when adding or editing projects.
+              </p>
             </div>
           </div>
           

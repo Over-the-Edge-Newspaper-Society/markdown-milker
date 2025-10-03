@@ -45,7 +45,7 @@ export class SettingsManager {
   
   static isConfigured(): boolean {
     const settings = this.getSettings();
-    return !!(settings?.github?.token && settings?.github?.repoUrl);
+    return !!(settings?.github?.token);
   }
   
   static getDefaultSettings(): AppSettings {

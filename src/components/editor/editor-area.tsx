@@ -347,8 +347,7 @@ export function EditorArea() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Unified 2-row header - hidden in docs preview mode */}
-      {activeTab !== 'preview' && (
+      {/* Header with tabs - always visible */}
       <div className="border-b bg-muted/30">
         {/* Row 1: File path, tabs, and actions */}
         <div className="px-4 h-10 flex items-center justify-between">
@@ -356,7 +355,7 @@ export function EditorArea() {
             <FileText className="h-4 w-4" />
             <span className="text-sm font-medium">{selectedFile}</span>
             <span className="text-xs text-muted-foreground">• {fileContent?.length || 0} chars</span>
-            
+
             {/* Tab buttons inline */}
             <div className="flex items-center ml-4">
               <button
@@ -383,7 +382,7 @@ export function EditorArea() {
               </button>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={manualSave}
@@ -402,8 +401,9 @@ export function EditorArea() {
             </button>
           </div>
         </div>
-        
-        {/* Row 2: Combined status and frontmatter line */}
+
+        {/* Row 2: Combined status and frontmatter line - only in editor mode */}
+        {activeTab === 'editor' && (
         <div className="px-4 h-8 flex items-center justify-between text-xs border-t">
           <div className="flex items-center gap-2">
             {/* Mode status */}
@@ -420,7 +420,7 @@ export function EditorArea() {
                 <span className="font-medium text-blue-600">Solo</span>
               </>
             )}
-            
+
             {/* Save info */}
             {totalSaves > 0 && (
               <>
@@ -434,11 +434,11 @@ export function EditorArea() {
                 <span className="text-blue-600">{lastSaveTime.toLocaleTimeString()}</span>
               </>
             )}
-            
+
             {/* Frontmatter info - will be populated by FrontmatterEditor */}
             <span id="frontmatter-info" data-path={selectedFile || ''} className="flex items-center gap-2"></span>
           </div>
-          
+
           {/* Right-aligned toggle button */}
           <button
             onClick={toggleMode}
@@ -448,8 +448,8 @@ export function EditorArea() {
             Switch to {editorMode === 'collaborative' ? 'Solo' : 'Collaborative'}
           </button>
         </div>
+        )}
       </div>
-      )}
 
       {/* Content area - Fixed overflow to allow menus to show */}
       <div className="flex-1 flex flex-col relative">

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'File not found', fullPath }, { status: 404 })
     }
 
-    await StarlightOrderManager.updateSidebarHidden(fullPath, Boolean(hidden), docsRoot)
+    await StarlightOrderManager.updateSidebarHidden(fullPath, Boolean(hidden), docsRoot, projectId)
 
     return NextResponse.json({ success: true, fullPath })
   } catch (error: any) {
