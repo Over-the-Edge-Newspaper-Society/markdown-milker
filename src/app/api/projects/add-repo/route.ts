@@ -50,6 +50,19 @@ export async function POST(request: NextRequest) {
 
       console.log('✅ Repository cloned successfully');
 
+      // Install dependencies if package.json exists
+      const packageJsonPath = path.join(projectDir, 'package.json');
+      if (existsSync(packageJsonPath)) {
+        console.log('📦 Installing dependencies...');
+        try {
+          await execAsync('npm install', { cwd: projectDir });
+          console.log('✅ Dependencies installed successfully');
+        } catch (installError) {
+          console.warn('⚠️ Failed to install dependencies:', installError);
+          // Continue anyway
+        }
+      }
+
       // Patch astro.config.mjs to use dynamic sidebar
       try {
         await StarlightOrderManager.patchAstroConfig(projectDir);
