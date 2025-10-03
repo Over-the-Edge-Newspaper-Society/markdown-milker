@@ -208,15 +208,16 @@ export function EnhancedDirectoryTree() {
     })
   }, [])
 
-  const handleCreateFile = async (name: string, parentPath?: string) => {
+  const handleCreateFile = async (name: string, content?: string) => {
     try {
-      const fullPath = parentPath ? `${parentPath}/${name}` : name
-      let fileName = fullPath
+      // If name contains path separator, it's already a full path
+      let fileName = name
       if (!fileName.endsWith('.md') && !fileName.endsWith('.markdown')) {
         fileName += '.md'
       }
-      
-      await createFile(fileName, '# New Document\n\nStart writing here...')
+
+      const defaultContent = '# New Document\n\nStart writing here...'
+      await createFile(fileName, content || defaultContent)
       await refreshFiles()
       selectFile(fileName)
     } catch (error) {

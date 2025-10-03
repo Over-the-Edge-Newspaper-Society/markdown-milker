@@ -19,7 +19,7 @@ import { Plus, FolderPlus, FileText, Folder } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface FileCreationDialogProps {
-  onCreateFile: (name: string, path?: string) => Promise<void>
+  onCreateFile: (name: string, content?: string) => Promise<void>
   onCreateFolder: (name: string, path?: string) => Promise<void>
   currentPath?: string
   trigger?: React.ReactNode
@@ -41,6 +41,9 @@ export function FileCreationDialog({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [createIndexFile, setCreateIndexFile] = useState(true)
+  const [showIndexTitleDialog, setShowIndexTitleDialog] = useState(false)
+  const [indexTitle, setIndexTitle] = useState('')
+  const [pendingFolderPath, setPendingFolderPath] = useState('')
 
   // Reset to default type when dialog opens
   useEffect(() => {
@@ -49,6 +52,7 @@ export function FileCreationDialog({
       setName('')
       setError('')
       setCreateIndexFile(true)
+      setIndexTitle('')
     }
   }, [open, defaultType])
 
@@ -68,23 +72,63 @@ export function FileCreationDialog({
           fileName += '.md'
         }
         await onCreateFile(fileName)
+        setOpen(false)
+        setName('')
+        setCreationType(defaultType)
+        setCreateIndexFile(true)
       } else {
         // Create the folder
         await onCreateFolder(fullPath)
 
-        // Create index file if checkbox is checked
+        // If checkbox is checked, show title dialog
         if (createIndexFile) {
-          const indexFileName = `${fullPath}/index.md`
-          await onCreateFile(indexFileName)
+          setPendingFolderPath(fullPath)
+          setIndexTitle(name.trim().split('-').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' '))
+          setOpen(false)
+          setShowIndexTitleDialog(true)
+        } else {
+          setOpen(false)
+          setName('')
+          setCreationType(defaultType)
+          setCreateIndexFile(true)
         }
       }
+    } catch (err) {
+      setError((err as Error).message || 'Failed to create item')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-      setOpen(false)
+  const handleIndexSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!indexTitle.trim()) return
+
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const indexFileName = `${pendingFolderPath}/index.md`
+      const indexContent = `---
+title: ${indexTitle.trim()}
+---
+
+# ${indexTitle.trim()}
+
+Start writing here...`
+
+      await onCreateFile(indexFileName, indexContent)
+
+      setShowIndexTitleDialog(false)
       setName('')
       setCreationType(defaultType)
       setCreateIndexFile(true)
+      setIndexTitle('')
+      setPendingFolderPath('')
     } catch (err) {
-      setError((err as Error).message || 'Failed to create item')
+      setError((err as Error).message || 'Failed to create index file')
     } finally {
       setIsLoading(false)
     }
@@ -225,6 +269,73 @@ export function FileCreationDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Index Title Dialog */}
+      <Dialog open={showIndexTitleDialog} onOpenChange={setShowIndexTitleDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Set Index File Title</DialogTitle>
+            <DialogDescription>
+              Enter the title for the index.md file in {pendingFolderPath}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleIndexSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="index-title">Title</Label>
+              <Input
+                id="index-title"
+                value={indexTitle}
+                onChange={(e) => setIndexTitle(e.target.value)}
+                placeholder="Enter title"
+                className={cn(error && 'border-red-500')}
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                This will be used in the frontmatter and as the main heading
+              </p>
+            </div>
+
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Preview</Label>
+              <div className="text-sm bg-muted p-2 rounded font-mono whitespace-pre">
+                {`---
+title: ${indexTitle || '...'}
+---
+
+# ${indexTitle || '...'}`}
+              </div>
+            </div>
+          </form>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowIndexTitleDialog(false)
+                setIndexTitle('')
+                setPendingFolderPath('')
+              }}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleIndexSubmit}
+              disabled={!indexTitle.trim() || isLoading}
+            >
+              {isLoading ? 'Creating...' : 'Create Index File'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }
