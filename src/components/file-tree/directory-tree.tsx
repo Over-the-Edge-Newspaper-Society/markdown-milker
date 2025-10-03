@@ -253,23 +253,16 @@ Start writing here...`
 
   const handleDelete = async (path: string, isDirectory: boolean) => {
     try {
-      const { deleteFile, deleteDirectory } = useEditorStore.getState()
+      const { deleteFile } = useEditorStore.getState()
 
-      if (isDirectory) {
-        await deleteDirectory(path)
-        toast({
-          title: 'Folder deleted',
-          description: `Successfully deleted ${path}`,
-          variant: 'success'
-        })
-      } else {
-        await deleteFile(path)
-        toast({
-          title: 'File deleted',
-          description: `Successfully deleted ${path}`,
-          variant: 'success'
-        })
-      }
+      // The deleteFile function handles both files and directories via the API
+      await deleteFile(path)
+
+      toast({
+        title: `${isDirectory ? 'Folder' : 'File'} deleted`,
+        description: `Successfully deleted ${path}`,
+        variant: 'success'
+      })
 
       await refreshFiles()
 

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFile, writeFile, readdir, mkdir, stat } from 'fs/promises'
 import { join, dirname, extname } from 'path'
-import { existsSync } from 'fs'
+import { existsSync, statSync, rmSync, unlinkSync } from 'fs'
 import { StarlightOrderManager } from '@/lib/starlight-order-manager'
 
 // Dynamic function to get the docs path based on settings
@@ -272,19 +272,35 @@ export async function DELETE(request: NextRequest) {
   const projectId = searchParams.get('projectId') || undefined
   const DOCS_PATH = getDocsPath(projectId)
   await ensureDocsDir(DOCS_PATH)
-  
+
   try {
     const path = searchParams.get('path')
-    
+
     if (!path || !isSecurePath(path, DOCS_PATH)) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
     }
 
     const fullPath = join(DOCS_PATH, path)
-    
-    // For now, we'll skip deletion implementation for safety
-    // You can implement this later with proper safeguards
-    return NextResponse.json({ error: 'Delete not implemented yet' }, { status: 501 })
+
+    // Check if path exists
+    if (!existsSync(fullPath)) {
+      return NextResponse.json({ error: 'File or folder not found' }, { status: 404 })
+    }
+
+    // Delete the file or directory
+    const stats = statSync(fullPath)
+    if (stats.isDirectory()) {
+      // Recursively delete directory
+      rmSync(fullPath, { recursive: true, force: true })
+    } else {
+      // Delete file
+      unlinkSync(fullPath)
+    }
+
+    // Regenerate sidebar config after deletion
+    await generateSidebarConfig(projectId)
+
+    return NextResponse.json({ success: true, message: 'Deleted successfully' })
   } catch (error) {
     console.error('DELETE Error:', error)
     return NextResponse.json({ error: 'Failed to delete' }, { status: 500 })
