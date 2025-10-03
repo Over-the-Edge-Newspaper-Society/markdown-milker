@@ -11,20 +11,23 @@ function getDocsPath(projectId?: string): string {
     const projPath = join(process.cwd(), 'projects', projectId, 'src', 'content', 'docs')
     if (existsSync(projPath)) return projPath
   }
-  // Check if we have a cloned repo
-  const repoPath = join(process.cwd(), 'repo')
-  if (existsSync(repoPath)) {
-    // Try to get content path from a temporary file or use default
-    const contentPath = 'src/content/docs' // This should come from settings, but for now use default
-    const fullContentPath = join(repoPath, contentPath)
-    if (existsSync(fullContentPath)) {
-      return fullContentPath
-    }
-    // If content path doesn't exist, return repo root
-    return repoPath
+
+  // Fallback: Try to find first available project
+  const projectsDir = join(process.cwd(), 'projects')
+  if (existsSync(projectsDir)) {
+    try {
+      const { readdirSync } = require('fs')
+      const projects = readdirSync(projectsDir, { withFileTypes: true })
+        .filter((d: any) => d.isDirectory())
+        .map((d: any) => d.name)
+      if (projects.length > 0) {
+        const firstProjectPath = join(projectsDir, projects[0], 'src', 'content', 'docs')
+        if (existsSync(firstProjectPath)) return firstProjectPath
+      }
+    } catch {}
   }
-  
-  // Fallback to local docs folder
+
+  // Final fallback to local docs folder
   return join(process.cwd(), 'docs')
 }
 
