@@ -12,8 +12,34 @@ function ensureDir(path) {
   }
 }
 
+const { readdirSync } = require('fs')
+
 const projectArg = process.argv[2]
-const repoRoot = projectArg ? resolve(projectArg) : join(process.cwd(), 'repo')
+let repoRoot
+
+if (projectArg) {
+  repoRoot = resolve(projectArg)
+} else {
+  // Find first available project in projects/ directory
+  const projectsDir = join(process.cwd(), 'projects')
+  if (existsSync(projectsDir)) {
+    try {
+      const projects = readdirSync(projectsDir, { withFileTypes: true })
+        .filter(d => d.isDirectory())
+        .map(d => d.name)
+      if (projects.length > 0) {
+        repoRoot = join(projectsDir, projects[0])
+        console.log(`📁 Using project: ${projects[0]}`)
+      }
+    } catch {}
+  }
+
+  if (!repoRoot) {
+    console.error('No projects found in /projects directory. Please add a project first.')
+    process.exit(1)
+  }
+}
+
 const astroConfigPath = join(repoRoot, 'astro.config.mjs')
 
 if (!existsSync(astroConfigPath)) {
