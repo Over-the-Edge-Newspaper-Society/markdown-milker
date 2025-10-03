@@ -13,7 +13,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FolderOpen, Plus, GitBranch } from 'lucide-react'
+import { FolderOpen, Plus, GitBranch, Trash2 } from 'lucide-react'
 import { useProjectStore } from '@/lib/stores/project-store'
 import { useEditorStore } from '@/lib/stores/editor-store'
 
@@ -139,6 +139,33 @@ export function ProjectSwitcher() {
     }
   }
 
+  const deleteProject = async (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    if (!confirm(`Are you sure you want to delete project "${projectId}"? This will remove all local files.`)) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/projects?projectId=${projectId}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        await load()
+        // If we deleted the active project, clear it
+        if (activeProject === projectId) {
+          setActiveProjectStore('', '')
+        }
+      } else {
+        const err = await res.json().catch(() => ({}))
+        alert('Failed to delete project: ' + (err.error || res.statusText))
+      }
+    } catch (error) {
+      alert('Failed to delete project: ' + (error as Error).message)
+    }
+  }
+
   return (
     <>
     <DropdownMenu>
@@ -150,10 +177,21 @@ export function ProjectSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         {projects.map((p) => (
-          <DropdownMenuItem key={p.id} onClick={() => switchProject(p.id, (p as any).path)}>
-            {p.name}
-            {p.isStarlight && <span className="ml-2 text-[10px] bg-muted px-1 rounded">Starlight</span>}
-          </DropdownMenuItem>
+          <div key={p.id} className="flex items-center group">
+            <DropdownMenuItem onClick={() => switchProject(p.id, (p as any).path)} className="flex-1">
+              <div className="flex items-center">
+                {p.name}
+                {p.isStarlight && <span className="ml-2 text-[10px] bg-muted px-1 rounded">Starlight</span>}
+              </div>
+            </DropdownMenuItem>
+            <button
+              onClick={(e) => deleteProject(p.id, e)}
+              className="ml-1 mr-1 p-1.5 hover:bg-destructive/20 rounded transition-colors opacity-0 group-hover:opacity-100"
+              title="Delete project"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+            </button>
+          </div>
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => setOpenCreate(true)}>
