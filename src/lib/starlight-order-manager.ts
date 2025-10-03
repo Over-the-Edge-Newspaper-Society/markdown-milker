@@ -81,7 +81,21 @@ export class StarlightOrderManager {
       const projectSidebarPath = join(process.cwd(), 'projects', projectId, 'sidebar.config.mjs')
       return projectSidebarPath
     }
-    return join(process.cwd(), 'repo', 'sidebar.config.mjs')
+    // Fallback: find first project's sidebar config
+    const projectsDir = join(process.cwd(), 'projects')
+    if (existsSync(projectsDir)) {
+      try {
+        const { readdirSync } = require('fs')
+        const projects = readdirSync(projectsDir, { withFileTypes: true })
+          .filter((d: any) => d.isDirectory())
+          .map((d: any) => d.name)
+        if (projects.length > 0) {
+          return join(projectsDir, projects[0], 'sidebar.config.mjs')
+        }
+      } catch {}
+    }
+    // Final fallback
+    return join(process.cwd(), 'sidebar.config.mjs')
   }
 
   static async readFrontmatterMeta(filePath: string): Promise<{ title?: string; order?: number; label?: string; hidden?: boolean }> {
