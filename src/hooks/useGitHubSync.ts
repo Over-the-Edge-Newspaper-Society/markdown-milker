@@ -1,74 +1,49 @@
 import { useState, useEffect } from 'react';
 import { SettingsManager } from '@/lib/settings';
 import { useFileStore } from '@/lib/stores/file-store';
+import { useProjectStore } from '@/lib/stores/project-store';
 
 export const useGitHubSync = () => {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'pulling' | 'pushing' | 'error'>('idle');
   const [isConfigured, setIsConfigured] = useState(false);
   const { setFiles } = useFileStore();
-  
+  const { activeProject } = useProjectStore();
+
   useEffect(() => {
     setIsConfigured(SettingsManager.isConfigured());
   }, []);
-  
+
   const pullFromGitHub = async () => {
     if (!isConfigured) {
       throw new Error('GitHub not configured');
     }
-    
+
+    if (!activeProject) {
+      throw new Error('No active project selected');
+    }
+
     setSyncStatus('pulling');
     try {
-      const settings = SettingsManager.getSettings();
-      
-      // First, pull the main content
+      // Pull the active project
       const response = await fetch('/api/github/pull', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token: settings?.github.token,
-          repoUrl: settings?.github.repoUrl,
-          branch: settings?.github.branch,
-          contentPath: settings?.github.contentPath
+          projectId: activeProject
         })
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('Pull successful:', data);
-        
-        // Also setup/update docs
-        try {
-          console.log('🚀 Setting up docs...');
-          const docsResponse = await fetch('/api/github/setup-docs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              token: settings?.github.token,
-              repoUrl: settings?.github.repoUrl,
-              branch: settings?.github.branch,
-              contentPath: settings?.github.contentPath
-            })
-          });
-          
-          if (docsResponse.ok) {
-            const docsData = await docsResponse.json();
-            console.log('📚 Docs setup successful:', docsData);
-            data.docsSetup = docsData;
-          } else {
-            console.warn('⚠️ Docs setup failed, continuing without docs');
-          }
-        } catch (docsError) {
-          console.warn('⚠️ Docs setup error:', docsError);
-          // Continue without docs setup
-        }
-        
+
         // Refresh the file tree by fetching the updated list
-        const filesResponse = await fetch('/api/files');
+        const filesResponse = await fetch(`/api/files?projectId=${encodeURIComponent(activeProject)}`);
         if (filesResponse.ok) {
           const files = await filesResponse.json();
           setFiles(files);
         }
-        
+
         // Show success message
         return data;
       } else {
@@ -82,30 +57,31 @@ export const useGitHubSync = () => {
       setSyncStatus('idle');
     }
   };
-  
+
   const pushToGitHub = async (commitMessage: string) => {
     if (!isConfigured) {
       throw new Error('GitHub not configured');
     }
-    
+
+    if (!activeProject) {
+      throw new Error('No active project selected');
+    }
+
     if (!commitMessage.trim()) {
       throw new Error('Commit message is required');
     }
-    
+
     setSyncStatus('pushing');
     try {
-      const settings = SettingsManager.getSettings();
       const response = await fetch('/api/github/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          token: settings?.github.token,
-          repoUrl: settings?.github.repoUrl,
-          branch: settings?.github.branch,
-          message: commitMessage 
+        body: JSON.stringify({
+          projectId: activeProject,
+          message: commitMessage
         })
       });
-      
+
       if (!response.ok) {
         const error = await response.text();
         throw new Error(error || 'Failed to push to GitHub');

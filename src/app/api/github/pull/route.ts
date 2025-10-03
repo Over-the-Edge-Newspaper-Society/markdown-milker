@@ -8,71 +8,48 @@ const execAsync = promisify(exec);
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, repoUrl, branch = 'main', contentPath = '' } = await request.json();
-    
-    if (!token || !repoUrl) {
+    const { projectId } = await request.json();
+
+    if (!projectId) {
       return NextResponse.json(
-        { error: 'Missing required fields: token, repoUrl' },
+        { error: 'Project ID is required' },
         { status: 400 }
       );
     }
-    
+
     console.log('🔄 Starting git pull process...');
-    console.log('📦 Repository:', repoUrl);
-    console.log('🌿 Branch:', branch);
-    console.log('📁 Content Path:', contentPath);
-    
-    const repoDir = path.join(process.cwd(), 'repo');
-    
-    // Check if repo directory exists
-    if (!existsSync(repoDir)) {
-      console.log('📥 Repository not found locally, cloning...');
-      
-      // Clone the repository
-      const authUrl = repoUrl.replace('https://', `https://${token}@`);
-      
-      try {
-        await execAsync(`git clone -b ${branch} "${authUrl}" "${repoDir}"`);
-        console.log('✅ Repository cloned successfully');
-      } catch (cloneError) {
-        console.error('❌ Failed to clone repository:', cloneError);
-        return NextResponse.json(
-          { error: 'Failed to clone repository. Make sure the repository exists and branch is correct.' },
-          { status: 500 }
-        );
-      }
-    } else {
-      console.log('📁 Repository exists, pulling latest changes...');
-      
-      try {
-        // Ensure we're on the correct branch
-        await execAsync(`git checkout ${branch}`, { cwd: repoDir });
-        
-        // Pull latest changes
-        await execAsync('git pull', { cwd: repoDir });
-        console.log('✅ Repository updated successfully');
-      } catch (pullError) {
-        console.error('❌ Failed to pull changes:', pullError);
-        return NextResponse.json(
-          { error: 'Failed to pull changes. Check if the branch exists or if there are conflicts.' },
-          { status: 500 }
-        );
-      }
+    console.log('📦 Project:', projectId);
+
+    const projectDir = path.join(process.cwd(), 'projects', projectId);
+
+    // Check if project directory exists
+    if (!existsSync(projectDir)) {
+      return NextResponse.json(
+        { error: 'Project not found locally' },
+        { status: 404 }
+      );
     }
-    
-    // Get information about the content
-    const contentDir = contentPath ? path.join(repoDir, contentPath) : repoDir;
-    const contentExists = existsSync(contentDir);
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    console.log('📁 Project exists, pulling latest changes...');
+
+    try {
+      // Pull latest changes
+      await execAsync('git pull', { cwd: projectDir });
+      console.log('✅ Repository updated successfully');
+    } catch (pullError) {
+      console.error('❌ Failed to pull changes:', pullError);
+      return NextResponse.json(
+        { error: 'Failed to pull changes. Check if there are conflicts or uncommitted changes.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
       message: 'Repository synchronized successfully',
-      repoPath: repoDir,
-      contentPath: contentPath,
-      contentExists: contentExists,
-      branch: branch
+      projectId: projectId
     });
-    
+
   } catch (error) {
     console.error('❌ GitHub pull error:', error);
     return NextResponse.json(
