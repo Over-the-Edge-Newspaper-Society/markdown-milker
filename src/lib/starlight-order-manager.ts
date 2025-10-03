@@ -362,7 +362,14 @@ export class StarlightOrderManager {
       delete sidebar.hidden
     }
 
-    const newData = { ...data, sidebar }
+    // If sidebar object is empty after changes, remove it entirely to avoid Astro validation errors
+    const newData = { ...data }
+    if (Object.keys(sidebar).length > 0) {
+      newData.sidebar = sidebar
+    } else {
+      delete newData.sidebar
+    }
+
     const updatedContent = stringifyFrontmatter(body, newData)
     await writeFile(filePath, updatedContent, 'utf-8')
     await StarlightOrderManager.generateSidebarConfig(docsRoot, projectId)
@@ -377,26 +384,49 @@ export class StarlightOrderManager {
 
     let content = await readFile(astroConfigPath, 'utf-8')
 
-    // Check if already patched
-    if (content.includes('sidebar.config.mjs')) {
-      console.log('astro.config.mjs already patched')
+    // Check if already patched correctly (has import and uses sidebarConfig)
+    const hasImport = content.includes('sidebar.config.mjs')
+    const usesSidebarConfig = /sidebar:\s*sidebarConfig/.test(content)
+
+    if (hasImport && usesSidebarConfig) {
+      console.log('astro.config.mjs already patched correctly')
       return
     }
 
-    // Add import for sidebar config after other imports
-    const importMatch = content.match(/(import .+ from .+;?\n)+/)
-    if (importMatch) {
-      const lastImportEnd = importMatch[0].length
-      content = content.slice(0, lastImportEnd) +
-                "import sidebarConfig from './sidebar.config.mjs';\n" +
-                content.slice(lastImportEnd)
+    // Add import for sidebar config after other imports if not present
+    if (!hasImport) {
+      const importMatch = content.match(/(import .+ from .+;?\n)+/)
+      if (importMatch) {
+        const lastImportEnd = importMatch[0].length
+        content = content.slice(0, lastImportEnd) +
+                  "import sidebarConfig from './sidebar.config.mjs';\n" +
+                  content.slice(lastImportEnd)
+      }
     }
 
     // Replace hardcoded sidebar array with sidebarConfig
-    content = content.replace(
-      /sidebar:\s*\[[\s\S]*?\],(\s*\n)/m,
-      'sidebar: sidebarConfig,$1'
-    )
+    // Find the sidebar property and replace its value, handling nested arrays properly
+    const sidebarMatch = content.match(/sidebar:\s*(\[|sidebarConfig)/)
+    if (sidebarMatch && sidebarMatch[1] === '[') {
+      const startIdx = sidebarMatch.index! + sidebarMatch[0].length - 1
+      let bracketCount = 0
+      let endIdx = startIdx
+
+      // Count brackets to find the matching closing bracket
+      for (let i = startIdx; i < content.length; i++) {
+        if (content[i] === '[') bracketCount++
+        if (content[i] === ']') bracketCount--
+        if (bracketCount === 0) {
+          endIdx = i + 1
+          break
+        }
+      }
+
+      // Replace the array with sidebarConfig
+      content = content.slice(0, sidebarMatch.index!) +
+                'sidebar: sidebarConfig' +
+                content.slice(endIdx)
+    }
 
     await writeFile(astroConfigPath, content, 'utf-8')
     console.log('✅ Patched astro.config.mjs to use dynamic sidebar')

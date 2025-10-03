@@ -296,7 +296,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Regenerate sidebar config after deletion
-    await generateSidebarConfig(projectId)
+    await StarlightOrderManager.generateSidebarConfig(DOCS_PATH, projectId)
 
     return NextResponse.json({ success: true, message: 'Deleted successfully' })
   } catch (error) {
