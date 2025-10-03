@@ -10,17 +10,27 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🗑️  Starting discard changes process...');
 
-    const repoDir = path.join(process.cwd(), 'repo');
+    const body = await request.json();
+    const { projectId } = body;
 
-    // Check if repo directory exists
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'Project ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const repoDir = path.join(process.cwd(), 'projects', projectId);
+
+    // Check if project directory exists
     if (!existsSync(repoDir)) {
       return NextResponse.json(
-        { error: 'Repository not found locally' },
+        { error: 'Project not found locally' },
         { status: 404 }
       );
     }
 
-    console.log('📁 Repository found, discarding all local changes...');
+    console.log(`📁 Project "${projectId}" found, discarding all local changes...`);
 
     try {
       // Reset all tracked files to HEAD

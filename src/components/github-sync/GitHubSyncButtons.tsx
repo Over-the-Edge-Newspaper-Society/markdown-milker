@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useGitHubSync } from '@/hooks/useGitHubSync';
+import { useProjectStore } from '@/lib/stores/project-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Download, Upload, Loader2, AlertCircle, Trash2 } from 'lucide-react';
 
 export const GitHubSyncButtons = () => {
   const { syncStatus, isConfigured, pullFromGitHub, pushToGitHub } = useGitHubSync();
+  const { activeProject } = useProjectStore();
   const [commitMessage, setCommitMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -70,6 +72,8 @@ export const GitHubSyncButtons = () => {
       // Call the API to discard changes
       const response = await fetch('/api/github/discard', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: activeProject }),
       });
 
       if (!response.ok) {
