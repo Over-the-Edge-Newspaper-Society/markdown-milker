@@ -46,12 +46,11 @@ export class CollaborationManager {
         this.wsUrl,
         this.documentId,
         this.ydoc,
-        { 
+        {
           connect: true,
           params: { documentId: this.documentId },
           resyncInterval: 5000,
-          maxBackoffTime: 1000,
-          maxReconnectTimeout: 5000
+          maxBackoffTime: 5000
         }
       )
 

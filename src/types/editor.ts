@@ -29,8 +29,6 @@ export interface EditorState {
 }
 
 export interface CrepeInstance extends Crepe {
-  getMarkdown?: () => string
-  setMarkdown?: (content: string) => void
   getValue?: () => string
   setValue?: (content: string) => void
   getContent?: () => string

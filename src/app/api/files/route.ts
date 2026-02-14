@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     // List files and directories with full paths (not nested structure)
     // The frontend will handle building the tree
     // Exclude _assets folder from file tree
-    async function getAllFiles(dirPath: string, relativePath: string = ''): Promise<any[]> {
+    const getAllFiles = async (dirPath: string, relativePath: string = ''): Promise<any[]> => {
       const files = await readdir(dirPath, { withFileTypes: true })
       const result = []
       
@@ -166,10 +166,22 @@ export async function DELETE(request: NextRequest) {
     }
 
     const fullPath = join(DOCS_PATH, path)
-    
-    // For now, we'll skip deletion implementation for safety
-    // You can implement this later with proper safeguards
-    return NextResponse.json({ error: 'Delete not implemented yet' }, { status: 501 })
+
+    if (!existsSync(fullPath)) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 })
+    }
+
+    const stats = await stat(fullPath)
+
+    if (stats.isDirectory()) {
+      const { rm } = await import('fs/promises')
+      await rm(fullPath, { recursive: true })
+    } else {
+      const { unlink } = await import('fs/promises')
+      await unlink(fullPath)
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('DELETE Error:', error)
     return NextResponse.json({ error: 'Failed to delete' }, { status: 500 })

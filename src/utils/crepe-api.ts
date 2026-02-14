@@ -68,11 +68,7 @@ export function setCrepeContent(crepeInstance: CrepeInstance, content: string): 
     console.log('🔄 Content appears to be missing, attempting to set...')
     
     // Try the available Crepe API methods
-    if (typeof crepeInstance.setMarkdown === 'function') {
-      console.log('✅ Using crepe.setMarkdown()')
-      crepeInstance.setMarkdown(content)
-      return
-    } else if (typeof crepeInstance.setValue === 'function') {
+    if (typeof crepeInstance.setValue === 'function') {
       console.log('✅ Using crepe.setValue()')
       crepeInstance.setValue(content)
       return

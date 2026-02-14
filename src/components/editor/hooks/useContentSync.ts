@@ -18,9 +18,8 @@ export function useContentSync({ getContent, onChange, collaborative, isReady }:
   const saveContent = useCallback(async (content: string, context: string = 'auto'): Promise<boolean> => {
     if (isSavingRef.current || !onChange) return false
     
-    // Basic content cleaning - preserve table structure with <br /> tags
+    // Basic content cleaning - normalize whitespace and fix image link syntax
     let cleanedContent = content
-      .replace(/<(?!br\s*\/?>)[^>]*>/g, '')  // Remove all HTML tags except <br />
       .replace(/\n{3,}/g, '\n\n')
       .replace(/!\[([^\]]*)\]\(<([^>]+)>\)/g, '![$1]($2)')
       .trim()

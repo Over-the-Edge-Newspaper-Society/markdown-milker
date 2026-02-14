@@ -257,7 +257,7 @@ export function useImageManagement() {
     // Also try to find any submit/confirm buttons
     setTimeout(() => {
       const buttons = imageBlock.querySelectorAll('button, [role="button"], .confirm, .submit, .ok')
-      for (const button of buttons) {
+      for (const button of Array.from(buttons)) {
         if (button.textContent?.toLowerCase().includes('ok') || 
             button.textContent?.toLowerCase().includes('confirm') ||
             button.textContent?.toLowerCase().includes('submit') ||

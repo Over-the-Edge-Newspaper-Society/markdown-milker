@@ -6,20 +6,6 @@ export { UnifiedCrepeEditor } from './UnifiedCrepeEditor'
 // ✅ UI COMPONENTS: Utility components
 export { SaveStatus } from './save-status'
 
-// ✅ LEGACY: Keep old editors for backwards compatibility (but mark as deprecated)
-/**
- * @deprecated Use UnifiedCrepeEditor with collaborative=false instead
- */
-export { SimpleEditor } from './SimpleEditor'
-
-/**
- * @deprecated Use UnifiedCrepeEditor with collaborative=true instead
- */
-export { WorkingCollaborativeCrepe } from './WorkingCollaborativeCrepe'
-
-// ✅ FALLBACK: Basic collaborative editor (if needed)
-// export { CollaborativeEditor } from './CollaborativeEditor'
-
 // ✅ TYPES: Re-export types for convenience
 export type { 
   ExtendedCrepeEditorProps,

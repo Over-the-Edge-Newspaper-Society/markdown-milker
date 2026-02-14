@@ -8,6 +8,8 @@ export interface FileNode {
   path: string
   type: 'file' | 'directory'
   children?: FileNode[]
+  size?: number
+  modified?: string
 }
 
 interface FileStore {

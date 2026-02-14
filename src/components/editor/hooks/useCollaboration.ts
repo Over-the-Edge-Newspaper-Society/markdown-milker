@@ -179,11 +179,11 @@ export function useCollaboration({ documentId, wsUrl, initialContent }: UseColla
         providerRef.current.disconnect()
         
         // Remove all event listeners to prevent further updates
-        if (typeof providerRef.current.removeAllListeners === 'function') {
-          providerRef.current.removeAllListeners()
+        if (typeof (providerRef.current as any).removeAllListeners === 'function') {
+          (providerRef.current as any).removeAllListeners()
         }
-        if (providerRef.current.awareness && typeof providerRef.current.awareness.removeAllListeners === 'function') {
-          providerRef.current.awareness.removeAllListeners()
+        if (providerRef.current.awareness && typeof (providerRef.current.awareness as any).removeAllListeners === 'function') {
+          (providerRef.current.awareness as any).removeAllListeners()
         }
         
         // Destroy the provider

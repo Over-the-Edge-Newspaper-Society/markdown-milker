@@ -1,6 +1,6 @@
 // src/app/api/files/move/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { readFile, writeFile, mkdir, unlink, rmdir, stat } from 'fs/promises'
+import { rename, mkdir } from 'fs/promises'
 import { join, dirname } from 'path'
 import { existsSync } from 'fs'
 
@@ -46,19 +46,8 @@ export async function POST(request: NextRequest) {
       await mkdir(targetDir, { recursive: true })
     }
 
-    // Get source stats to determine if it's a file or directory
-    const sourceStats = await stat(sourceFullPath)
-
-    if (sourceStats.isFile()) {
-      // Move file
-      const content = await readFile(sourceFullPath, 'utf-8')
-      await writeFile(targetFullPath, content, 'utf-8')
-      await unlink(sourceFullPath)
-    } else if (sourceStats.isDirectory()) {
-      // Move directory (recursive)
-      await moveDirectory(sourceFullPath, targetFullPath)
-      await removeDirectory(sourceFullPath)
-    }
+    // Use rename for atomic move (works for both files and directories)
+    await rename(sourceFullPath, targetFullPath)
     
     console.log('Successfully moved:', sourceFullPath, '->', targetFullPath)
     return NextResponse.json({ success: true })
@@ -68,48 +57,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to recursively move directory contents
-async function moveDirectory(sourcePath: string, targetPath: string) {
-  const { readdir } = require('fs/promises')
-  
-  // Create target directory
-  await mkdir(targetPath, { recursive: true })
-  
-  // Read source directory contents
-  const items = await readdir(sourcePath, { withFileTypes: true })
-  
-  for (const item of items) {
-    const sourceItemPath = join(sourcePath, item.name)
-    const targetItemPath = join(targetPath, item.name)
-    
-    if (item.isDirectory()) {
-      await moveDirectory(sourceItemPath, targetItemPath)
-    } else {
-      const content = await readFile(sourceItemPath, 'utf-8')
-      await writeFile(targetItemPath, content, 'utf-8')
-    }
-  }
-}
-
-// Helper function to recursively remove directory
-async function removeDirectory(dirPath: string) {
-  const { readdir } = require('fs/promises')
-  
-  try {
-    const items = await readdir(dirPath, { withFileTypes: true })
-    
-    for (const item of items) {
-      const itemPath = join(dirPath, item.name)
-      
-      if (item.isDirectory()) {
-        await removeDirectory(itemPath)
-      } else {
-        await unlink(itemPath)
-      }
-    }
-    
-    await rmdir(dirPath)
-  } catch (error) {
-    console.error('Error removing directory:', error)
-  }
-}
